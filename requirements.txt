@@ -6,5 +6,5 @@ anaconda
 # Create the 'thermal' virtual environment with Python 3.8
 python=3.8
 
-# Package for extracting thermal images from FLIR cameras
+# Pip Package for extracting thermal images from FLIR cameras
 flirimageextractor==1.5.3
