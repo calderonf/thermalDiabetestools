@@ -23,7 +23,7 @@
 3. Install the required dependencies:
 
    ```bash
-   conda create --name thermal --file requirements.txt
+   conda env create -f environment.yml
    ```
 
 ## Usage
