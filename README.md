@@ -18,10 +18,12 @@
    git clone https://github.com/calderonf/ThermalDiabetesTools.git
    ```
 
-2. Install the required dependencies:
+2. Install anaconda Python https://www.anaconda.com/
+
+3. Install the required dependencies:
 
    ```bash
-   pip install -r requirements.txt
+   conda create --name thermal --file requirements.txt
    ```
 
 ## Usage
