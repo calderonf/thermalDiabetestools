@@ -28,6 +28,29 @@
    conda env create -f environment.yml
    ```
 
+### to install sdk of flir (to this moment is optional)
+
+Download it from web page, https://flir.custhelp.com/app/account/fl_download_software and then select SDK and FLIR science file sdk i download and tested the windows one. 
+
+decompress and install the .exe in my case was "C:\Program Files\FLIR Systems\sdks" the installation folder
+
+in "file:///C:/Program%20Files/FLIR%20Systems/sdks/file/python/doc/index.html" there is a documentation of the python sdk. 
+
+there was no whl in my sdk i have to install it:
+you will need a visual studio (https://visualstudio.microsoft.com/es/thank-you-downloading-visual-studio/?sku=Community&rel=15) for the version 3.8 in windows the compiler was vs2017 install it with C++ support
+   ```bash
+   cd "C:\Program Files\FLIR Systems\sdks\file\python"
+   conda activate thermal
+   pip install setuptools cython wheel
+   python setup.py install --shadow-dir C:\tempflir
+   ```
+   now find in this temporal directory for the *.whl file in my case python 3.8 and AMD64.
+   an install it using 
+   ```bash
+   pip install .\FileSDK-4.1.0-cp38-cp38-win_amd64.whl
+   ```
+
+
 ## Usage
 
 1. Launch the `ThermalDiabetesTools` application.

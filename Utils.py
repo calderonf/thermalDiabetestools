@@ -24,6 +24,77 @@ def save_thermal_csv(flirobj, filename,delimiter=';'):
     data = flirobj.get_thermal_np()
     np.savetxt(filename, data, delimiter=delimiter)# ; is the default for spanish.
 
+
+def extract_coarse_image_values(flirobj, offset=[0], plot=1):
+    """
+    Function that creates the coarse RGB image that matches the resolution of the thermal image.
+    
+    INPUTS:
+        1) flirobj: the flirimageextractor object.
+        2) offset: optional variable that shifts the RGB image to match the same field of view as thermal image. 
+                If not provided the offset values will be extracted from FLIR file. 
+                Use the manual_img_registration function to determine offset.
+        3) plot: a flag that determine if a figure of thermal and coarse cropped RGB is displayed. 
+                1 = plot displayed, 0 = no plot is displayed
+    OUTPUTS:
+        1) lowres: a 3D numpy array of RGB image that matches resolution of thermal image (It has not been cropped) 
+        2) crop: a 3D numpy arary of RGB image that matches resolution and field of view of thermal image.
+    """
+    # Get RGB Image
+    visual = flirobj.rgb_image_np
+    highres_ht = visual.shape[0]
+    highres_wd = visual.shape[1]
+    
+    # Getting Values for Offset
+    if len(offset) < 2:
+        offsetx = int(subprocess.check_output([flirobj.exiftool_path, "-OffsetX", "-b", flirobj.flir_img_filename])) 
+        offsety = int(subprocess.check_output([flirobj.exiftool_path, "-OffsetY", "-b", flirobj.flir_img_filename])) 
+    else:
+        offsetx = offset[0]
+        offsety = offset[1]
+    pipx2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPX2", "-b", flirobj.flir_img_filename])) # Width
+    pipy2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPY2", "-b", flirobj.flir_img_filename])) # Height
+    real2ir = float(subprocess.check_output([flirobj.exiftool_path, "-Real2IR", "-b", flirobj.flir_img_filename])) # conversion of RGB to Temp
+    print(f"Image with offsetx={offsetx}, offsety={offsety}, pipx2={pipx2}, pipy2={pipy2}, real2ir={real2ir}")
+    """ Example values:
+    more of this parameters in 
+    http://softwareservices.flir.com/BFS-U3-51S5PC/latest/Model/public/ImageFormatControl.html#OffsetX
+    XoffsetX =-1 las de la mano acá tienen +1
+    OffsetY=37 las de la mano acá tienen -58
+    PiPX2 479
+    PiPY2 639
+    Real2IR 1.22885632514954
+    
+    """
+    
+    
+    
+    # Set up Arrays
+    height_range = np.arange(0,highres_ht,real2ir).astype(int)
+    width_range = np.arange(0,highres_wd,real2ir).astype(int)
+    htv, wdv = np.meshgrid(height_range,width_range)
+    
+    # Assigning low resolution data
+    lowres = np.swapaxes(visual[htv, wdv,  :], 0, 1)
+    
+    # Cropping low resolution data
+    height_range = np.arange(-offsety,-offsety+pipy2).astype(int)
+    width_range = np.arange(-offsetx,-offsetx+pipx2).astype(int)
+    xv, yv = np.meshgrid(height_range,width_range)
+    crop = np.swapaxes(lowres[xv, yv, :],0,1)
+    
+    if plot == 1:
+        therm = flirobj.get_thermal_np()
+        plt.figure(figsize=(10,5))
+        plt.subplot(1,2,1)
+        plt.imshow(therm, cmap='jet')
+        plt.title('Thermal Image')
+        plt.subplot(1,2,2)
+        plt.imshow(crop)
+        plt.title('RGB Cropped Image')
+        plt.show(block='TRUE') 
+
+
 def extract_coarse_image(flirobj, offset=[0], plot=1):
     """
     Function that creates the coarse RGB image that matches the resolution of the thermal image.
@@ -54,6 +125,7 @@ def extract_coarse_image(flirobj, offset=[0], plot=1):
     pipx2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPX2", "-b", flirobj.flir_img_filename])) # Width
     pipy2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPY2", "-b", flirobj.flir_img_filename])) # Height
     real2ir = float(subprocess.check_output([flirobj.exiftool_path, "-Real2IR", "-b", flirobj.flir_img_filename])) # conversion of RGB to Temp
+    print(f"Image with offsetx={offsetx}, offsety={offsety}, pipx2={pipx2}, pipy2={pipy2}, real2ir={real2ir}")
     """ Example values:
     more of this parameters in 
     http://softwareservices.flir.com/BFS-U3-51S5PC/latest/Model/public/ImageFormatControl.html#OffsetX
