@@ -12,6 +12,8 @@
 
 ## Installation
 
+0. Download and decompress exiftool ( https://exiftool.org/ ) and then paste it into windows folder ("C:\\Windows\\exiftool.exe")
+
 1. Clone the repository:
 
    ```bash
@@ -53,7 +55,7 @@ This project is licensed under the [MIT License](LICENSE).?????
 - FLIR_thermal_tools project https://github.com/susanmeerdink/FLIR_thermal_tools
 - flir image extractor project (https://pypi.org/project/flirimageextractor/) https://github.com/nationaldronesau/FlirImageExtractor
 - read_thermal_temperature project https://github.com/ManishSahu53/read_thermal_temperature
-
+- partial acknowledmen to Flir and teledine corporation to the creation of this software, your lack and difficulti of acces to the information of your cameras was vital for the creation of this library (https://flir.custhelp.com/app/account/fl_download_software)
 
 
 ## Contact
