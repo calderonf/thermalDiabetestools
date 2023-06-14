@@ -9,19 +9,156 @@ import glob
 import matplotlib
 matplotlib.use('TKAgg') # Needed to have figures display properly. 
 
-def save_thermal_csv(flirobj, filename,delimiter=';'):
+def matchbydescriptors(image_a,image_b):
+
+    # Detectar y extraer puntos clave y descriptores en ambas imágenes
+    orb = cv2.ORB_create()
+    keypoints_a, descriptors_a = orb.detectAndCompute(image_a, None)
+    keypoints_b, descriptors_b = orb.detectAndCompute(image_b, None)
+
+    # Encontrar los puntos correspondientes entre las imágenes
+    matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    matches = matcher.match(descriptors_a, descriptors_b)
+
+    # Seleccionar los mejores N puntos correspondientes
+    n_points = 4
+    matches = sorted(matches, key=lambda x: x.distance)[:n_points]
+
+    # Extraer las coordenadas de los puntos correspondientes en ambas imágenes
+    points_a = np.float32([keypoints_a[match.queryIdx].pt for match in matches]).reshape(-1, 1, 2)
+    points_b = np.float32([keypoints_b[match.trainIdx].pt for match in matches]).reshape(-1, 1, 2)
+
+    # Calcular la matriz de homografía
+    homography_matrix, _ = cv2.findHomography(points_b, points_a, cv2.RANSAC, 5.0)
+
+    # Realizar la transformación perspectiva de la imagen B a la perspectiva de la imagen A
+    image_b_transformed = cv2.warpPerspective(image_b, homography_matrix, (image_a.shape[1], image_a.shape[0]))
+
+    # Superponer las imágenes transformadas
+    alpha = 0.5
+    output_image = cv2.addWeighted(image_a, 1 - alpha, image_b_transformed, alpha, 0)
+    return output_image,homography_matrix
+
+
+
+
+def overlay_images(img1, img2, scale_factor, offset_x, offset_y, alpha):
+    """
+    Overlay two images on top of each other with scaling, translation, and transparency.
+
+    Args:
+        img1 (numpy.ndarray): The base image.
+        img2 (numpy.ndarray): The image to overlay on top of the base image. this is a temperature image so it is a float image
+        scale_factor (float): The scaling factor for img2.
+        offset_x (int): The horizontal translation offset.
+        offset_y (int): The vertical translation offset.
+        alpha (float): The transparency level of img2. Value ranges from 0.0 to 1.0,
+                       where 0.0 is fully transparent and 1.0 is fully opaque.
+
+    Returns:
+        tuple[numpy.ndarray]: A tuple containing two images:
+            - The resulting image with the overlay applied.
+            - A copy of the region in img1 where img2 is overlaid.
+
+    Raises:
+        ValueError: If the dimensions of img1 and img2 do not match. (not yet implemented TODO...)
+
+    """
+    height1, width1, _ = img1.shape
+    height2, width2, _ = img2.shape
+    img2 = cv2.resize(img2, None, fx=scale_factor, fy=scale_factor)
+    x_offset = int((img1.shape[1] - img2.shape[1]) / 2 + offset_x)
+    y_offset = int((img1.shape[0] - img2.shape[0]) / 2 + offset_y)
+    image_copy = np.copy(img1[y_offset:y_offset+img2.shape[0], x_offset:x_offset+img2.shape[1]])
+    overlay = img1.copy()
+    overlay[y_offset:y_offset+img2.shape[0], x_offset:x_offset+img2.shape[1]] = img2
+    output = cv2.addWeighted(overlay, alpha, img1, 1 - alpha, 0)
+    return(output,image_copy)
+
+
+
+def apply_colormap(image):
+    """
+    Apply a false color map to a grayscale image.
+
+    Args:
+        image (numpy.ndarray): The grayscale input image.
+
+    Returns:
+        numpy.ndarray: The resulting false color image.
+
+    """
+    normalized_image = (image - np.min(image)) / (np.max(image) - np.min(image))
+    colormap_image = cv2.applyColorMap((normalized_image * 255).astype(np.uint8), cv2.COLORMAP_JET)
+    return colormap_image
+
+
+def extract_images(flirobj, offset=[0], plot=1,transparency=0.5):
+    """
+    Function that matches the thermal image to the RGB image 
+    
+    INPUTS:
+        1) flirobj: the flirimageextractor object.
+        2) offset: optional variable that shifts the RGB image to match the same field of view as thermal image. 
+                If not provided the offset values will be extracted from FLIR file.
+        3) plot: a flag that determine if a figure of thermal and coarse cropped RGB is displayed. 
+                1 = plot displayed, 0 = no plot is displayed
+    OUTPUTS:
+        1) colormapthermal: a 3D numpy array of thermal image in a resolution similar of the RGB 
+        2) rgbimage: a 3D numpy arary of RGB image that matches resolution and field of view of thermal image. (It has not been cropped) 
+        3) temps: a 1D floating point matrix with temperatures 
+        4) rgbimagecropped: a 3D rgb image cropped to correspond to the temperature matrix  
+    """
+    visual = flirobj.rgb_image_np
+    thermalimg=flirobj.get_thermal_np()
+    if len(offset) < 2:
+        offsetx = int(subprocess.check_output([flirobj.exiftool_path, "-OffsetX", "-b", flirobj.flir_img_filename])) 
+        offsety = int(subprocess.check_output([flirobj.exiftool_path, "-OffsetY", "-b", flirobj.flir_img_filename])) 
+    else:
+        offsetx = offset[0]
+        offsety = offset[1]
+    pipx2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPX2", "-b", flirobj.flir_img_filename])) # Width
+    pipy2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPY2", "-b", flirobj.flir_img_filename])) # Height
+    real2ir = float(subprocess.check_output([flirobj.exiftool_path, "-Real2IR", "-b", flirobj.flir_img_filename])) # conversion of RGB to Temp
+    print(f"Image with offsetx={offsetx}, offsety={offsety}, pipx2={pipx2}, pipy2={pipy2}, real2ir={real2ir}")
+    colormap_image = apply_colormap(thermalimg)
+    scale_factor = (1/real2ir)*1080/(np.min((pipy2+1,pipx2+1))) 
+    Imsalida,image_copy=overlay_images(visual, colormap_image, scale_factor, offsetx, offsety, transparency)
+    rgb_height, rgb_width, _ = image_copy.shape
+    temp_img_resized = cv2.resize(thermalimg, (rgb_width, rgb_height), interpolation=cv2.INTER_LANCZOS4)
+
+    if plot == 1:
+        plt.figure(figsize=(10,5))
+        plt.subplot(2,2,1)
+        plt.imshow(colormap_image)
+        plt.title('Thermal Image in false color')
+        plt.subplot(2,2,2)
+        plt.imshow(Imsalida)
+        plt.title('RGB + thermal uncropped Image')
+        plt.subplot(2,2,3)
+        plt.imshow(temp_img_resized, cmap='jet')
+        plt.title('Thermal Image resized to fit color image in jet colormap (actual temperatures)')
+        plt.subplot(2,2,4)
+        plt.imshow(image_copy)
+        plt.title('RGB image cropped')
+        plt.show(block='TRUE') 
+    
+    return colormap_image, Imsalida,temp_img_resized,image_copy
+
+
+
+def save_thermal_csv(data, filename, delimiter=';'):
     """
     Function that saves the numpy array as a .csv
     
     INPUTS:
-    1) flirobj: the flirimageextractor object.
+    1) data: the thermal matrix.
     2) filename: a string containing the location of the output csv file. 
     3) delimiter: use , to english and ; to spanish to save the dataset. 
     
     OUTPUTS:
     Saves a csv of the thermal image where each value is a pixel in the thermal image. 
     """
-    data = flirobj.get_thermal_np()
     np.savetxt(filename, data, delimiter=delimiter)# ; is the default for spanish.
 
 
@@ -78,8 +215,8 @@ def extract_coarse_image_values(flirobj, offset=[0], plot=1):
     lowres = np.swapaxes(visual[htv, wdv,  :], 0, 1)
     
     # Cropping low resolution data
-    height_range = np.arange(-offsety,-offsety+pipy2).astype(int)
-    width_range = np.arange(-offsetx,-offsetx+pipx2).astype(int)
+    height_range = np.arange(-offsety+(pipy2/2),-offsety+(pipy2/2)).astype(int)
+    width_range = np.arange(-offsetx+(pipx2/2),-offsetx+(pipx2/2)).astype(int)
     xv, yv = np.meshgrid(height_range,width_range)
     crop = np.swapaxes(lowres[xv, yv, :],0,1)
     
@@ -148,8 +285,8 @@ def extract_coarse_image(flirobj, offset=[0], plot=1):
     lowres = np.swapaxes(visual[htv, wdv,  :], 0, 1)
     
     # Cropping low resolution data
-    height_range = np.arange(-offsety,-offsety+pipy2).astype(int)
-    width_range = np.arange(-offsetx,-offsetx+pipx2).astype(int)
+    height_range = np.arange(-offsety+(pipy2/2),-offsety+(pipy2/2)).astype(int)
+    width_range = np.arange(-offsetx+(pipx2/2),-offsetx+(pipx2/2)).astype(int)
     xv, yv = np.meshgrid(height_range,width_range)
     crop = np.swapaxes(lowres[xv, yv, :],0,1)
     
@@ -523,45 +660,6 @@ def correct_temp_emiss(flirobj, emiss, plot=1):
         plt.show(block='true')
         
     return corrected_temp
-
-
-
-import cv2
-
-def overlay_images(img1, img2, scale_factor, offset_x, offset_y, alpha):
-    # Obtener las dimensiones de las imágenes
-    height1, width1, _ = img1.shape
-    height2, width2, _ = img2.shape
-
-
-    # Escalar la imagen #2
-    img2 = cv2.resize(img2, None, fx=scale_factor, fy=scale_factor)
-
-    # Calcular las coordenadas para superponer la imagen #2 sobre la imagen #1
-    x_offset = int((img1.shape[1] - img2.shape[1]) / 2 + offset_x)
-    y_offset = int((img1.shape[0] - img2.shape[0]) / 2 + offset_y)
-
-    # Superponer las imágenes
-    overlay = img1.copy()
-    overlay[y_offset:y_offset+img2.shape[0], x_offset:x_offset+img2.shape[1]] = img2
-
-    # Aplicar transparencia
-    output = cv2.addWeighted(overlay, alpha, img1, 1 - alpha, 0)
-
-    return(output)
-
-
-import numpy as np
-import cv2
-
-def apply_colormap(image):
-    # Normalizar la imagen en el rango de 0 a 1
-    normalized_image = (image - np.min(image)) / (np.max(image) - np.min(image))
-
-    # Aplicar el mapa de colores (blue to red)
-    colormap_image = cv2.applyColorMap((normalized_image * 255).astype(np.uint8), cv2.COLORMAP_JET)
-
-    return colormap_image
 
 
 
