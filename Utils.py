@@ -523,3 +523,46 @@ def correct_temp_emiss(flirobj, emiss, plot=1):
         plt.show(block='true')
         
     return corrected_temp
+
+
+
+import cv2
+
+def overlay_images(img1, img2, scale_factor, offset_x, offset_y, alpha):
+    # Obtener las dimensiones de las imágenes
+    height1, width1, _ = img1.shape
+    height2, width2, _ = img2.shape
+
+
+    # Escalar la imagen #2
+    img2 = cv2.resize(img2, None, fx=scale_factor, fy=scale_factor)
+
+    # Calcular las coordenadas para superponer la imagen #2 sobre la imagen #1
+    x_offset = int((img1.shape[1] - img2.shape[1]) / 2 + offset_x)
+    y_offset = int((img1.shape[0] - img2.shape[0]) / 2 + offset_y)
+
+    # Superponer las imágenes
+    overlay = img1.copy()
+    overlay[y_offset:y_offset+img2.shape[0], x_offset:x_offset+img2.shape[1]] = img2
+
+    # Aplicar transparencia
+    output = cv2.addWeighted(overlay, alpha, img1, 1 - alpha, 0)
+
+    return(output)
+
+
+import numpy as np
+import cv2
+
+def apply_colormap(image):
+    # Normalizar la imagen en el rango de 0 a 1
+    normalized_image = (image - np.min(image)) / (np.max(image) - np.min(image))
+
+    # Aplicar el mapa de colores (blue to red)
+    colormap_image = cv2.applyColorMap((normalized_image * 255).astype(np.uint8), cv2.COLORMAP_JET)
+
+    return colormap_image
+
+
+
+
