@@ -161,6 +161,41 @@ def save_thermal_csv(data, filename, delimiter=';'):
     """
     np.savetxt(filename, data, delimiter=delimiter)# ; is the default for spanish.
 
+import cv2
+import numpy as np
+
+def segment_skin(image):
+    """
+    Segment the skin color in an image to identify the foot region.
+
+    Args:
+        image (numpy.ndarray): Input image as a numpy array.
+
+    Returns:
+        numpy.ndarray: Binary mask with the identified foot region.
+
+    """
+    # Convert the image to the HSV color space
+    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # Define the lower and upper thresholds for skin color
+    lower_skin = np.array([0, 20, 70])    # Adjust these values as needed
+    upper_skin = np.array([20, 255, 255]) # Adjust these values as needed
+
+    # Create a mask by thresholding the image with the skin color range
+    mask = cv2.inRange(hsv_image, lower_skin, upper_skin)
+
+    # Apply morphological operations to enhance the mask (optional)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+    # Return the binary mask
+    return mask
+
+
+
+
+
 
 def extract_coarse_image_values(flirobj, offset=[0], plot=1):
     """
