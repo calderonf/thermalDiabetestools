@@ -161,8 +161,7 @@ def save_thermal_csv(data, filename, delimiter=';'):
     """
     np.savetxt(filename, data, delimiter=delimiter)# ; is the default for spanish.
 
-import cv2
-import numpy as np
+
 
 def segment_skin(image):
     """
@@ -175,24 +174,32 @@ def segment_skin(image):
         numpy.ndarray: Binary mask with the identified foot region.
 
     """
-    # Convert the image to the HSV color space
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    lower = np.array([0, 30, 40], dtype = "uint8")
+    upper = np.array([20, 180, 255], dtype = "uint8")
+    lower2 = np.array([172, 30, 40], dtype = "uint8")
+    upper2 = np.array([180, 180, 210], dtype = "uint8")
+    converted = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    skinMask = cv2.inRange(converted, lower, upper)
+    skinMask2 = cv2.inRange(converted, lower2, upper2)
+    skinMask = cv2.GaussianBlur(skinMask, (3, 3), 0)
+    skinMask2 = cv2.GaussianBlur(skinMask2, (3, 3), 0)
+    skin1 = cv2.bitwise_and(image, image, mask = skinMask)
+    skin2 = cv2.bitwise_and(image, image, mask = skinMask2)
+    skin = cv2.bitwise_or(skin1,skin2)
+    return skin
 
-    # Define the lower and upper thresholds for skin color
-    lower_skin = np.array([0, 20, 70])    # Adjust these values as needed
-    upper_skin = np.array([20, 255, 255]) # Adjust these values as needed
-
-    # Create a mask by thresholding the image with the skin color range
-    mask = cv2.inRange(hsv_image, lower_skin, upper_skin)
-
-    # Apply morphological operations to enhance the mask (optional)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-
-    # Return the binary mask
-    return mask
-
-
+def fethearing_bin_to_color(binary_image, color_image):
+    # Operación de cierre morfológico con un kernel elíptico de tamaño 5x5
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    closed_image = cv2.morphologyEx(binary_image, cv2.MORPH_CLOSE, kernel)
+    
+    # Fethearing usando filtro guiado
+    filtered_image = cv2.ximgproc.guidedFilter(color_image, closed_image, 20, eps=0.1)#5, eps=1e-4
+    
+    # Umbralización de la imagen filtrada
+    _, thresholded_image = cv2.threshold(filtered_image,20, 255, cv2.THRESH_BINARY)
+    
+    return filtered_image
 
 
 
