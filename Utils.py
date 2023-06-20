@@ -9,6 +9,207 @@ import glob
 import matplotlib
 matplotlib.use('TKAgg') # Needed to have figures display properly. 
 
+
+
+def segment_skin(image):
+    """
+    Segment the skin color in an image to identify the foot region.
+
+    Args:
+        image (numpy.ndarray): Input image as a numpy array.
+
+    Returns:
+        numpy.ndarray: Binary mask with the identified foot region.
+
+    """
+    lower = np.array([0, 30, 40], dtype = "uint8")
+    upper = np.array([20, 180, 255], dtype = "uint8")
+    lower2 = np.array([172, 30, 40], dtype = "uint8")
+    upper2 = np.array([180, 180, 210], dtype = "uint8")
+    converted = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    skinMask = cv2.inRange(converted, lower, upper)
+    skinMask2 = cv2.inRange(converted, lower2, upper2)
+    skinMask = cv2.GaussianBlur(skinMask, (3, 3), 0)
+    skinMask2 = cv2.GaussianBlur(skinMask2, (3, 3), 0)
+    skin1 = cv2.bitwise_and(image, image, mask = skinMask)
+    skin2 = cv2.bitwise_and(image, image, mask = skinMask2)
+    skin = cv2.bitwise_or(skin1,skin2)
+    return skin
+
+def fethearing_bin_to_color(binary_image, color_image):
+    # Operación de cierre morfológico con un kernel elíptico de tamaño 5x5
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    closed_image1 = cv2.morphologyEx(binary_image, cv2.MORPH_CLOSE, kernel)
+    kerne2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    closed_image = cv2.morphologyEx(closed_image1, cv2.MORPH_CLOSE, kerne2)
+    
+    # Fethearing usando filtro guiado
+    filtered_image = cv2.ximgproc.guidedFilter(color_image, closed_image, 50, eps=1e-4)#5, eps=1e-4
+    
+    # Umbralización de la imagen filtrada
+    _, thresholded_image = cv2.threshold(filtered_image,20, 255, cv2.THRESH_BINARY)
+    
+    kerne3 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    output_image = cv2.morphologyEx(thresholded_image, cv2.MORPH_OPEN, kerne3)
+    
+    return filtered_image,output_image
+
+def draw_largest_contours(image):
+    # Hacer una AND entre los 3 canales de la imagen
+    and_image = np.bitwise_and(image[:,:,0], np.bitwise_and(image[:,:,1], image[:,:,2]))
+
+    # Encontrar los contornos más externos
+    contours, _ = cv2.findContours(and_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Ordenar los contornos por su área de mayor a menor
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+
+    # Encontrar los dos contornos más grandes
+    largest_contours = contours[:2]
+
+    # Crear una nueva imagen binaria con solo los contornos más grandes dibujados
+    new_image = np.zeros_like(image)
+    cv2.drawContours(new_image, largest_contours, -1, (255, 255, 255), thickness=cv2.FILLED)
+
+    # Convertir la imagen a binaria
+    new_image = cv2.cvtColor(new_image, cv2.COLOR_BGR2GRAY)
+    _, new_image = cv2.threshold(new_image, 10, 255, cv2.THRESH_BINARY)
+
+    return new_image
+
+def resize_contour_boxes_rotated(binary_image, color_image, thermal_image, percentage):
+    contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    rects = [cv2.minAreaRect(cnt) for cnt in contours]
+    offset = percentage / 100 / 2
+    enlarged_boxes = []
+    for rect in rects:
+        center, size, angle = rect
+        width = size[0] * (1 + offset * 2)
+        height = size[1] * (1 + offset * 2)
+        enlarged_boxes.append(cv2.boxPoints(((center[0], center[1]), (width, height), angle)))
+
+    # Crea una lista de imágenes con el contenido de la imagen a color en la ubicación de los rectángulos contenedores
+    result_images = []
+    for box in enlarged_boxes:
+        rect = cv2.minAreaRect(box)
+        center, size, angle = rect
+        width = int(size[0])
+        height = int(size[1])
+        M = cv2.getRotationMatrix2D(center, angle, 1)
+        rotated = cv2.warpAffine(color_image, M, (color_image.shape[1], color_image.shape[0]))
+        result_images.append(rotated[int(center[1] - height / 2):int(center[1] + height / 2), int(center[0] - width / 2):int(center[0] + width / 2)])
+
+    return result_images,result_images
+
+def resize_contour_boxes(binary_image, color_image, thermal_image, percentage=10):
+    # Encuentra los contornos externos de la imagen binaria
+    contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Encuentra los mínimos rectángulos contenedores de la lista de contornos
+    boxes = [cv2.boundingRect(cnt) for cnt in contours]
+    # Calcula el desplazamiento para aplicar el porcentaje simétricamente
+    offset = percentage / 100 / 2
+    # Incrementa el tamaño de los rectángulos contenedores según el porcentaje especificado
+    enlarged_boxes = [(int(x - w * offset), int(y - h * offset), int(w * (1 + offset * 2)), int(h * (1 + offset * 2))) for (x, y, w, h) in boxes]
+    # Crea una lista de imágenes con el contenido de la imagen a color en la ubicación de los rectángulos contenedores
+    result_images = []
+    for box in enlarged_boxes:
+        x, y, w, h = box
+        result_images.append(color_image[y:y+h, x:x+w])
+    result_thermal=[]
+    for box in enlarged_boxes:
+        x, y, w, h = box
+        result_thermal.append(thermal_image[y:y+h, x:x+w])
+    return result_images,result_thermal
+        
+def plot_images_and_thermal(image_list,thermal_list):
+    num_images = len(image_list)+len(thermal_list)
+    fig, axes = plt.subplots(1, num_images, figsize=(12, 4))
+    for i in range(len(image_list)):
+        axes[i].imshow(image_list[i])
+        axes[i].axis('off')
+        
+    for i in range(len(thermal_list)):
+        axes[len(image_list)+i].imshow(thermal_list[i], cmap='jet')
+        axes[len(image_list)+i].axis('off')
+        
+    plt.tight_layout()
+    plt.show()
+    
+def apply_mask(image, mask):
+    # Verifica si las dimensiones de las imágenes son iguales
+    if image.shape[:2] != mask.shape[:2]:
+        raise ValueError("Las dimensiones de las imágenes no coinciden.")
+
+    # Crea una imagen negra del mismo tamaño que la imagen original
+    masked_image = np.zeros_like(image)
+
+    # Copia los píxeles de la imagen original donde la máscara es uno
+    masked_image[mask.astype(bool)] = image[mask.astype(bool)]
+
+    return masked_image
+
+def Find_feets(Color_Image,thermal_image,percentage=0):
+    output=segment_skin(Color_Image)
+    _,thresholded_image=fethearing_bin_to_color(output, Color_Image)
+    binary=draw_largest_contours(thresholded_image)
+    #segmented_Feet,segmented_temps=resize_contour_boxes(binary, apply_mask(Color_Image, binary), thermal_image, percentage=percentage)
+    #segmented_Feet,segmented_temps=resize_contour_boxes(binary, Color_Image, thermal_image, percentage=percentage)
+    segmented_Feet,segmented_temps=resize_contour_boxes_rotated(binary, Color_Image, thermal_image, percentage=percentage)
+    return segmented_Feet,segmented_temps
+
+
+def matchbydescriptors(image_a,image_b):
+    # Detectar y extraer puntos clave y descriptores en ambas imágenes
+    orb = cv2.SIFT_create(5000)
+    keypoints_a, descriptors_a = orb.detectAndCompute(image_a, None)
+    keypoints_b, descriptors_b = orb.detectAndCompute(image_b, None)
+    # Encontrar los puntos correspondientes entre las imágenes
+    matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    
+    
+    matches = matcher.match(descriptors_a, descriptors_b)
+    # Seleccionar los mejores N puntos correspondientes
+    n_points = int(0.5*len(matches))
+    matches = sorted(matches, key=lambda x: x.distance)[:n_points]
+    # Extraer las coordenadas de los puntos correspondientes en ambas imágenes
+    points_a = np.float32([keypoints_a[match.queryIdx].pt for match in matches]).reshape(-1, 1, 2)
+    points_b = np.float32([keypoints_b[match.trainIdx].pt for match in matches]).reshape(-1, 1, 2)
+    # Calcular la matriz de homografía
+    homography_matrix, _ = cv2.findHomography(points_b, points_a, cv2.RANSAC, 5.0)
+    # Realizar la transformación perspectiva de la imagen B a la perspectiva de la imagen A
+    image_b_transformed = cv2.warpPerspective(image_b, homography_matrix, (image_a.shape[1], image_a.shape[0]))
+    # Superponer las imágenes transformadas
+    alpha = 0.5
+    output_image = cv2.addWeighted(image_a, 1 - alpha, image_b_transformed, alpha, 0)
+    return output_image,homography_matrix
+
+def visualize_descriptors(image_a, image_b):
+    # Detectar y extraer puntos clave y descriptores en ambas imágenes
+    orb = cv2.SIFT_create(5000)
+    keypoints_a, descriptors_a = orb.detectAndCompute(image_a, None)
+    keypoints_b, descriptors_b = orb.detectAndCompute(image_b, None)
+
+    # Visualizar los puntos clave en la imagen A
+    img_a_with_keypoints = cv2.drawKeypoints(image_a, keypoints_a, None)
+
+    # Visualizar los puntos clave en la imagen B
+    img_b_with_keypoints = cv2.drawKeypoints(image_b, keypoints_b, None)
+
+    # Mostrar las imágenes con los puntos clave utilizando Matplotlib
+    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    ax[0].imshow(cv2.cvtColor(img_a_with_keypoints, cv2.COLOR_BGR2RGB))
+    ax[0].set_title('Imagen A con puntos clave')
+    ax[0].axis('off')
+
+    ax[1].imshow(cv2.cvtColor(img_b_with_keypoints, cv2.COLOR_BGR2RGB))
+    ax[1].set_title('Imagen B con puntos clave')
+    ax[1].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
+
 def matchbydescriptors(image_a,image_b):
 
     # Detectar y extraer puntos clave y descriptores en ambas imágenes
@@ -162,44 +363,6 @@ def save_thermal_csv(data, filename, delimiter=';'):
     np.savetxt(filename, data, delimiter=delimiter)# ; is the default for spanish.
 
 
-
-def segment_skin(image):
-    """
-    Segment the skin color in an image to identify the foot region.
-
-    Args:
-        image (numpy.ndarray): Input image as a numpy array.
-
-    Returns:
-        numpy.ndarray: Binary mask with the identified foot region.
-
-    """
-    lower = np.array([0, 30, 40], dtype = "uint8")
-    upper = np.array([20, 180, 255], dtype = "uint8")
-    lower2 = np.array([172, 30, 40], dtype = "uint8")
-    upper2 = np.array([180, 180, 210], dtype = "uint8")
-    converted = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-    skinMask = cv2.inRange(converted, lower, upper)
-    skinMask2 = cv2.inRange(converted, lower2, upper2)
-    skinMask = cv2.GaussianBlur(skinMask, (3, 3), 0)
-    skinMask2 = cv2.GaussianBlur(skinMask2, (3, 3), 0)
-    skin1 = cv2.bitwise_and(image, image, mask = skinMask)
-    skin2 = cv2.bitwise_and(image, image, mask = skinMask2)
-    skin = cv2.bitwise_or(skin1,skin2)
-    return skin
-
-def fethearing_bin_to_color(binary_image, color_image):
-    # Operación de cierre morfológico con un kernel elíptico de tamaño 5x5
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    closed_image = cv2.morphologyEx(binary_image, cv2.MORPH_CLOSE, kernel)
-    
-    # Fethearing usando filtro guiado
-    filtered_image = cv2.ximgproc.guidedFilter(color_image, closed_image, 20, eps=0.1)#5, eps=1e-4
-    
-    # Umbralización de la imagen filtrada
-    _, thresholded_image = cv2.threshold(filtered_image,20, 255, cv2.THRESH_BINARY)
-    
-    return filtered_image
 
 
 
