@@ -8,6 +8,37 @@ import sys
 
 # https://simpleitk.readthedocs.io/en/master/registrationOverview.html
 
+
+def cv2_grid_sampling(fixed, moving, displacement, is_binary=False):
+    # Convert the numpy arrays to SimpleITK images
+    fixed_sitk = sitk.GetImageFromArray(fixed)
+    moving_sitk = sitk.GetImageFromArray(moving)
+    out_sitk= sitk_grid_sampling(fixed_sitk,moving_sitk, displacement,is_binary=is_binary)
+    return sitk.GetArrayFromImage(out_sitk)
+
+def sitk_grid_sampling(fixed,moving, displacement,is_binary=False):
+    """_summary_
+
+    Args:
+        fixed (sitk image): reference image
+        moving (sitk image): image to resample
+        displacement (_type_): transformation
+        is_binary (bool, optional): dice si es binaria o termica. Defaults to False.
+
+    Returns:
+        _type_: image transformated
+    """
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetReferenceImage(fixed)
+    interpolator = sitk.sitkNearestNeighbor if is_binary else sitk.sitkLinear
+    resampler.SetInterpolator(interpolator)
+    #valor por defecto del pixel
+    defaultTemp= 0 if is_binary else 18
+    resampler.SetDefaultPixelValue(defaultTemp)
+    resampler.SetTransform(displacement)
+    out = resampler.Execute(moving)
+    return out
+
 def sitk_image_to_opencv(image, force_8bits=True):
     image_np = sitk.GetArrayFromImage(image)
     return image_np.astype(np.uint8)
@@ -112,7 +143,7 @@ def register_images_Similarity2DTransform(fixed_image, moving_image, output_tran
     R.SetMetricAsMattesMutualInformation(numberOfBins)
     R.SetMetricSamplingPercentage(samplingPercentage, sitk.sitkWallClock)
     R.SetMetricSamplingStrategy(R.RANDOM)
-    R.SetOptimizerAsRegularStepGradientDescent(0.1, 0.001, 400)
+    R.SetOptimizerAsRegularStepGradientDescent(0.1, 0.0005, 800)
     initial_transform = sitk.CenteredTransformInitializer(fixed_image, moving_image, sitk.Similarity2DTransform(),sitk.CenteredTransformInitializerFilter.GEOMETRY)
     R.SetInitialTransform(initial_transform)
     R.SetInterpolator(sitk.sitkLinear)
@@ -145,5 +176,6 @@ def register_images_Similarity2DTransform(fixed_image, moving_image, output_tran
     return {
         "fixed": fixed_image,
         "moving": moving_image,
-        "composition": cimg
+        "composition": cimg,
+        "Transform":outTx
     }   

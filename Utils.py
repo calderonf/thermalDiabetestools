@@ -9,6 +9,19 @@ import glob
 import matplotlib
 matplotlib.use('TKAgg') # Needed to have figures display properly. 
 
+def reorder_contours(contornos):
+    # Calcula los centroides de los contornos
+    centroides = []
+    for contorno in contornos:
+        momento = cv2.moments(contorno)
+        cx = int(momento["m10"] / momento["m00"])
+        #cy = int(momento["m01"] / momento["m00"])
+        centroides.append(cx)
+
+    # Ordena los contornos según la posición de sus centroides en el eje x
+    contornos_ordenados = [c for _, c in sorted(zip(centroides, contornos), key=lambda pair: pair[0])]
+    return contornos_ordenados
+
 def segment_skin(image):
     """
     Segment the skin color in an image to identify the foot region.
@@ -61,10 +74,9 @@ def draw_largest_contours(image):
 
     # Ordenar los contornos por su área de mayor a menor
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
-
     # Encontrar los dos contornos más grandes
     largest_contours = contours[:2]
-
+    
     # Crear una nueva imagen binaria con solo los contornos más grandes dibujados
     new_image = np.zeros_like(image)
     cv2.drawContours(new_image, largest_contours, -1, (255, 255, 255), thickness=cv2.FILLED)
@@ -76,7 +88,9 @@ def draw_largest_contours(image):
     return new_image
 
 def resize_contour_boxes_rotated(binary_image, color_image, thermal_image, percentage):
-    contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_no_order, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours=reorder_contours(contours_no_order)
+    
     rects = [cv2.minAreaRect(cnt) for cnt in contours]
     offset = percentage / 100 / 2
     enlarged_boxes = []
@@ -96,8 +110,17 @@ def resize_contour_boxes_rotated(binary_image, color_image, thermal_image, perce
         M = cv2.getRotationMatrix2D(center, angle, 1)
         rotated = cv2.warpAffine(color_image, M, (color_image.shape[1], color_image.shape[0]))
         result_images.append(rotated[int(center[1] - height / 2):int(center[1] + height / 2), int(center[0] - width / 2):int(center[0] + width / 2)])
+    result_temperatures = []
+    for box in enlarged_boxes:
+        rect = cv2.minAreaRect(box)
+        center, size, angle = rect
+        width = int(size[0])
+        height = int(size[1])
+        M = cv2.getRotationMatrix2D(center, angle, 1)
+        rotatedt = cv2.warpAffine(thermal_image, M, (thermal_image.shape[1], thermal_image.shape[0]))
+        result_temperatures.append(rotatedt[int(center[1] - height / 2):int(center[1] + height / 2), int(center[0] - width / 2):int(center[0] + width / 2)])
 
-    return result_images,result_images
+    return result_images,result_temperatures
 
 def resize_contour_boxes(binary_image, color_image, thermal_image, percentage=10):
     # Encuentra los contornos externos de la imagen binaria
@@ -146,6 +169,21 @@ def apply_mask(image, mask):
 
     return masked_image
 
+def rotate_image(image, direction):
+    height, width = image.shape[:2]
+
+    if width > height:
+        if direction == "cw":
+            rotated_image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+        elif direction == "ccw":
+            rotated_image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        else:
+            raise ValueError("Invalid direction. Expected 'cw' or 'ccw'.")
+        
+        return rotated_image
+    
+    return image
+
 def Find_feets(Color_Image,thermal_image,percentage=0):
     output=segment_skin(Color_Image)
     _,thresholded_image=fethearing_bin_to_color(output, Color_Image)
@@ -153,6 +191,10 @@ def Find_feets(Color_Image,thermal_image,percentage=0):
     #segmented_Feet,segmented_temps=resize_contour_boxes(binary, apply_mask(Color_Image, binary), thermal_image, percentage=percentage)
     #segmented_Feet,segmented_temps=resize_contour_boxes(binary, Color_Image, thermal_image, percentage=percentage)
     segmented_Feet,segmented_temps=resize_contour_boxes_rotated(binary, Color_Image, thermal_image, percentage=percentage)
+    segmented_Feet[0]=rotate_image(segmented_Feet[0], "cw")
+    segmented_temps[0]=rotate_image(segmented_temps[0], "cw")
+    segmented_Feet[1]=rotate_image(segmented_Feet[1], "ccw")
+    segmented_temps[1]=rotate_image(segmented_temps[1], "ccw")
     return segmented_Feet,segmented_temps
 
 def matchbydescriptors(image_a,image_b):
