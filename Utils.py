@@ -9,8 +9,6 @@ import glob
 import matplotlib
 matplotlib.use('TKAgg') # Needed to have figures display properly. 
 
-
-
 def segment_skin(image):
     """
     Segment the skin color in an image to identify the foot region.
@@ -157,7 +155,6 @@ def Find_feets(Color_Image,thermal_image,percentage=0):
     segmented_Feet,segmented_temps=resize_contour_boxes_rotated(binary, Color_Image, thermal_image, percentage=percentage)
     return segmented_Feet,segmented_temps
 
-
 def matchbydescriptors(image_a,image_b):
     # Detectar y extraer puntos clave y descriptores en ambas imágenes
     orb = cv2.SIFT_create(5000)
@@ -208,8 +205,6 @@ def visualize_descriptors(image_a, image_b):
     plt.tight_layout()
     plt.show()
 
-
-
 def matchbydescriptors(image_a,image_b):
 
     # Detectar y extraer puntos clave y descriptores en ambas imágenes
@@ -239,9 +234,6 @@ def matchbydescriptors(image_a,image_b):
     alpha = 0.5
     output_image = cv2.addWeighted(image_a, 1 - alpha, image_b_transformed, alpha, 0)
     return output_image,homography_matrix
-
-
-
 
 def overlay_images(img1, img2, scale_factor, offset_x, offset_y, alpha):
     """
@@ -276,8 +268,6 @@ def overlay_images(img1, img2, scale_factor, offset_x, offset_y, alpha):
     output = cv2.addWeighted(overlay, alpha, img1, 1 - alpha, 0)
     return(output,image_copy)
 
-
-
 def apply_colormap(image):
     """
     Apply a false color map to a grayscale image.
@@ -292,7 +282,6 @@ def apply_colormap(image):
     normalized_image = (image - np.min(image)) / (np.max(image) - np.min(image))
     colormap_image = cv2.applyColorMap((normalized_image * 255).astype(np.uint8), cv2.COLORMAP_JET)
     return colormap_image
-
 
 def extract_images(flirobj, offset=[0], plot=1,transparency=0.5):
     """
@@ -346,8 +335,6 @@ def extract_images(flirobj, offset=[0], plot=1,transparency=0.5):
     
     return colormap_image, Imsalida,temp_img_resized,image_copy
 
-
-
 def save_thermal_csv(data, filename, delimiter=';'):
     """
     Function that saves the numpy array as a .csv
@@ -361,11 +348,6 @@ def save_thermal_csv(data, filename, delimiter=';'):
     Saves a csv of the thermal image where each value is a pixel in the thermal image. 
     """
     np.savetxt(filename, data, delimiter=delimiter)# ; is the default for spanish.
-
-
-
-
-
 
 def extract_coarse_image_values(flirobj, offset=[0], plot=1):
     """
@@ -435,7 +417,6 @@ def extract_coarse_image_values(flirobj, offset=[0], plot=1):
         plt.imshow(crop)
         plt.title('RGB Cropped Image')
         plt.show(block='TRUE') 
-
 
 def extract_coarse_image(flirobj, offset=[0], plot=1):
     """
