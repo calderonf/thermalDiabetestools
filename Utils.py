@@ -91,24 +91,54 @@ def resize_contour_boxes_rotated(binary_image, color_image, thermal_image, perce
     contours_no_order, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours=reorder_contours(contours_no_order)
     
+    #print("tamaño contornos:",len (contours))
     rects = [cv2.minAreaRect(cnt) for cnt in contours]
+    #print("tamaño rects:",len (rects))
+    #print("Rectangulos contenedores:\n",rects)
+    
+    fig, ax = plt.subplots()
+    ax.imshow(binary_image, cmap='gray')
+    for rect in rects:
+        box = cv2.boxPoints(rect)
+        box = np.int0(box)
+        ax.add_patch(plt.Polygon(box, edgecolor='r', facecolor='none'))
+    plt.show(block='TRUE')
+    
     offset = percentage / 100 / 2
     enlarged_boxes = []
     for rect in rects:
         center, size, angle = rect
         width = size[0] * (1 + offset * 2)
         height = size[1] * (1 + offset * 2)
+        #print("Puntos del rectangulo en objeto:\n",cv2.boxPoints(((center[0], center[1]), (width, height), angle)))
         enlarged_boxes.append(cv2.boxPoints(((center[0], center[1]), (width, height), angle)))
 
     # Crea una lista de imágenes con el contenido de la imagen a color en la ubicación de los rectángulos contenedores
     result_images = []
     for box in enlarged_boxes:
         rect = cv2.minAreaRect(box)
+        
+        #print("Rectangulos contenedores agrandados:\n",rect)
+        
         center, size, angle = rect
         width = int(size[0])
         height = int(size[1])
+        
+        if width>height:
+            width,height=height,width ## el cambio de variables mas loco del mundo
+            angle=angle-90
+        
         M = cv2.getRotationMatrix2D(center, angle, 1)
-        rotated = cv2.warpAffine(color_image, M, (color_image.shape[1], color_image.shape[0]))
+        
+        #print("Tamaño imagen warped", (color_image.shape[1], color_image.shape[0]))
+        
+        rotated = cv2.warpAffine(color_image, M, (color_image.shape[1], color_image.shape[0]),borderMode=cv2.BORDER_REFLECT)
+        #print("Recorte en: ",int(center[1] - height / 2),":",int(center[1] + height / 2),",", int(center[0] - width / 2),":",int(center[0] + width / 2))
+        #plt.figure(figsize=(10,5))
+        #plt.imshow(rotated)
+        #plt.title('rotated')
+        #plt.show(block='TRUE') 
+        
         result_images.append(rotated[int(center[1] - height / 2):int(center[1] + height / 2), int(center[0] - width / 2):int(center[0] + width / 2)])
     result_temperatures = []
     for box in enlarged_boxes:
@@ -116,10 +146,16 @@ def resize_contour_boxes_rotated(binary_image, color_image, thermal_image, perce
         center, size, angle = rect
         width = int(size[0])
         height = int(size[1])
+        if width>height:
+            width,height=height,width ## el cambio de variables mas loco del mundo
+            angle=angle-90
         M = cv2.getRotationMatrix2D(center, angle, 1)
         rotatedt = cv2.warpAffine(thermal_image, M, (thermal_image.shape[1], thermal_image.shape[0]))
         result_temperatures.append(rotatedt[int(center[1] - height / 2):int(center[1] + height / 2), int(center[0] - width / 2):int(center[0] + width / 2)])
-
+    #print(30*"*")
+    #print("Tamaño de imagenes resultantes de pies")
+    #print("Imagen r: ",result_images[0].shape,"Imagen l: ",result_images[1].shape)
+    
     return result_images,result_temperatures
 
 def resize_contour_boxes(binary_image, color_image, thermal_image, percentage=10):
@@ -188,8 +224,6 @@ def Find_feets(Color_Image,thermal_image,percentage=0):
     output=segment_skin(Color_Image)
     _,thresholded_image=fethearing_bin_to_color(output, Color_Image)
     binary=draw_largest_contours(thresholded_image)
-    #segmented_Feet,segmented_temps=resize_contour_boxes(binary, apply_mask(Color_Image, binary), thermal_image, percentage=percentage)
-    #segmented_Feet,segmented_temps=resize_contour_boxes(binary, Color_Image, thermal_image, percentage=percentage)
     segmented_Feet,segmented_temps=resize_contour_boxes_rotated(binary, Color_Image, thermal_image, percentage=percentage)
     segmented_Feet[0]=rotate_image(segmented_Feet[0], "cw")
     segmented_temps[0]=rotate_image(segmented_temps[0], "cw")
@@ -352,14 +386,16 @@ def extract_images(flirobj, offset=[0], plot=1,transparency=0.5):
     pipx2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPX2", "-b", flirobj.flir_img_filename])) # Width
     pipy2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPY2", "-b", flirobj.flir_img_filename])) # Height
     real2ir = float(subprocess.check_output([flirobj.exiftool_path, "-Real2IR", "-b", flirobj.flir_img_filename])) # conversion of RGB to Temp
-    print(f"Image with offsetx={offsetx}, offsety={offsety}, pipx2={pipx2}, pipy2={pipy2}, real2ir={real2ir}")
+    if plot:
+        print(f"Image with offsetx={offsetx}, offsety={offsety}, pipx2={pipx2}, pipy2={pipy2}, real2ir={real2ir}")
+    
     colormap_image = apply_colormap(thermalimg)
     scale_factor = (1/real2ir)*1080/(np.min((pipy2+1,pipx2+1))) 
     Imsalida,image_copy=overlay_images(visual, colormap_image, scale_factor, offsetx, offsety, transparency)
     rgb_height, rgb_width, _ = image_copy.shape
     temp_img_resized = cv2.resize(thermalimg, (rgb_width, rgb_height), interpolation=cv2.INTER_LANCZOS4)
 
-    if plot == 1:
+    if plot:
         plt.figure(figsize=(10,5))
         plt.subplot(2,2,1)
         plt.imshow(colormap_image)
@@ -421,7 +457,7 @@ def extract_coarse_image_values(flirobj, offset=[0], plot=1):
     pipx2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPX2", "-b", flirobj.flir_img_filename])) # Width
     pipy2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPY2", "-b", flirobj.flir_img_filename])) # Height
     real2ir = float(subprocess.check_output([flirobj.exiftool_path, "-Real2IR", "-b", flirobj.flir_img_filename])) # conversion of RGB to Temp
-    print(f"Image with offsetx={offsetx}, offsety={offsety}, pipx2={pipx2}, pipy2={pipy2}, real2ir={real2ir}")
+    #print(f"Image with offsetx={offsetx}, offsety={offsety}, pipx2={pipx2}, pipy2={pipy2}, real2ir={real2ir}")
     """ Example values:
     more of this parameters in 
     http://softwareservices.flir.com/BFS-U3-51S5PC/latest/Model/public/ImageFormatControl.html#OffsetX
@@ -490,7 +526,7 @@ def extract_coarse_image(flirobj, offset=[0], plot=1):
     pipx2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPX2", "-b", flirobj.flir_img_filename])) # Width
     pipy2 = int(subprocess.check_output([flirobj.exiftool_path, "-PiPY2", "-b", flirobj.flir_img_filename])) # Height
     real2ir = float(subprocess.check_output([flirobj.exiftool_path, "-Real2IR", "-b", flirobj.flir_img_filename])) # conversion of RGB to Temp
-    print(f"Image with offsetx={offsetx}, offsety={offsety}, pipx2={pipx2}, pipy2={pipy2}, real2ir={real2ir}")
+    #print(f"Image with offsetx={offsetx}, offsety={offsety}, pipx2={pipx2}, pipy2={pipy2}, real2ir={real2ir}")
     """ Example values:
     more of this parameters in 
     http://softwareservices.flir.com/BFS-U3-51S5PC/latest/Model/public/ImageFormatControl.html#OffsetX
@@ -770,7 +806,7 @@ def batch_extract_temp_for_class(dirLoc, mask, emiss=[0], exiftoolpath=''):
                 The third dimension size will match the number of files in directory.
     """  
     filelist = glob.glob(dirLoc + '*')
-    print('Found ' + str(len(filelist)) + ' files.')
+    #print('Found ' + str(len(filelist)) + ' files.')
     all_temp = np.ma.empty((mask.shape[0], mask.shape[1], len(filelist)))
     
     for f in range(0,len(filelist)):
@@ -843,7 +879,7 @@ def develop_correct_emissivity(class_img):
     cbar.ax.set_ylabel('Classes')
     plt.show(block='true')
     
-    print('Input the emissivity for each class. If unknown put 0.95')
+    #print('Input the emissivity for each class. If unknown put 0.95')
     emiss = np.zeros((K))
     for c in range(0,K):
         strout = 'Emissivity for Class ' + str(c+1) + ': '
