@@ -8,8 +8,8 @@ import flirimageextractor
 import Utils as u
 import cv2
 import registration_simpleitk as sr
-DEBUG=True
-DEBUG_VISUAL=True
+DEBUG=False
+DEBUG_VISUAL=False
 DEBUG_VISUAL_L2=True
 PREVSIZE=(205, 443)
 

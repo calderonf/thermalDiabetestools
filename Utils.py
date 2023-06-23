@@ -95,7 +95,7 @@ def resize_contour_boxes_rotated(binary_image, color_image, thermal_image, perce
     rects = [cv2.minAreaRect(cnt) for cnt in contours]
     #print("tamaño rects:",len (rects))
     #print("Rectangulos contenedores:\n",rects)
-    
+    """
     fig, ax = plt.subplots()
     ax.imshow(binary_image, cmap='gray')
     for rect in rects:
@@ -103,7 +103,7 @@ def resize_contour_boxes_rotated(binary_image, color_image, thermal_image, perce
         box = np.int0(box)
         ax.add_patch(plt.Polygon(box, edgecolor='r', facecolor='none'))
     plt.show(block='TRUE')
-    
+    """
     offset = percentage / 100 / 2
     enlarged_boxes = []
     for rect in rects:
@@ -150,7 +150,7 @@ def resize_contour_boxes_rotated(binary_image, color_image, thermal_image, perce
             width,height=height,width ## el cambio de variables mas loco del mundo
             angle=angle-90
         M = cv2.getRotationMatrix2D(center, angle, 1)
-        rotatedt = cv2.warpAffine(thermal_image, M, (thermal_image.shape[1], thermal_image.shape[0]))
+        rotatedt = cv2.warpAffine(thermal_image, M, (thermal_image.shape[1], thermal_image.shape[0]),borderMode=cv2.BORDER_REFLECT)
         result_temperatures.append(rotatedt[int(center[1] - height / 2):int(center[1] + height / 2), int(center[0] - width / 2):int(center[0] + width / 2)])
     #print(30*"*")
     #print("Tamaño de imagenes resultantes de pies")
