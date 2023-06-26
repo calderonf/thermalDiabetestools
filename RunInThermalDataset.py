@@ -18,7 +18,7 @@ thermal_images_folder="Thermal-Images"
 flirfolder="flir"
 sub_folders = ["Control", "Diabetic"]
 patient_numbers = {
-    "Control": [4, 3, 5, 6, 9, 11, 12, 13, 14, 16, 17, 18, 19],
+    "Control": [3, 4, 5, 6, 9, 11, 12, 13, 14, 16, 17, 18, 19],
     "Diabetic": [1, 2, 7, 8, 10, 20, 21, 22]
 }
 if DEBUG_VISUAL_L2:

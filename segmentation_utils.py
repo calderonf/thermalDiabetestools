@@ -1,3 +1,6 @@
+
+# Python 2/3 compatibility
+from __future__ import print_function
 import os
 from datetime import datetime
 import numpy as np
@@ -10,115 +13,186 @@ import cv2
 import registration_simpleitk as sr
 import numpy as np
 import cv2
+import sys
 
 
-class GrabCutApp:
-    def __init__(self):
-        self.rect = None
-        self.drawing = False
-        self.image = None
-        self.mask = None
-        self.output = None
-        self.init_rect = False
+#!/usr/bin/env python
+'''
+===============================================================================
+Interactive Image Segmentation using GrabCut algorithm.
 
-    def set_image_and_win_name(self, image, win_name):
-        self.image = image
-        self.win_name = win_name
+This sample shows interactive image segmentation using grabcut algorithm.
 
-    def show_image(self):
-        cv2.imshow(self.win_name, self.image)
+USAGE:
+    python grabcut.py <filename>
 
-    def on_mouse(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.drawing = True
-            self.rect = (x, y, 1, 1)
+README FIRST:
+    Two windows will show up, one for input and one for output.
 
-        elif event == cv2.EVENT_LBUTTONUP:
-            self.drawing = False
-            self.rect = (self.rect[0], self.rect[1], x - self.rect[0], y - self.rect[1])
-            self.init_rect = True
-            self.process_image()
+    At first, in input window, draw a rectangle around the object using the
+right mouse button. Then press 'n' to segment the object (once or a few times)
+For any finer touch-ups, you can press any of the keys below and draw lines on
+the areas you want. Then again press 'n' to update the output.
+
+Key '1' - To select areas of sure background
+Key '2' - To select areas of sure foreground
+Key '3' - To select areas of probable background
+Key '4' - To select areas of probable foreground
+
+Key 'e' - To update the segmentation
+Key 'r' - To reset the setup
+Key 's' - To save the results
+===============================================================================
+'''
+
+class GrabCutApp():
+    BLUE = [255,0,0]        # rectangle color
+    RED = [0,0,255]         # PR BG
+    GREEN = [0,255,0]       # PR FG
+    BLACK = [0,0,0]         # sure BG
+    WHITE = [255,255,255]   # sure FG
+
+    DRAW_BG = {'color' : BLACK, 'val' : 0}
+    DRAW_FG = {'color' : WHITE, 'val' : 1}
+    DRAW_PR_BG = {'color' : RED, 'val' : 2}
+    DRAW_PR_FG = {'color' : GREEN, 'val' : 3}
+
+    # setting up flags
+    rect = (0,0,1,1)
+    drawing = False         # flag for drawing curves
+    rectangle = False       # flag for drawing rect
+    rect_over = False       # flag to check if rect drawn
+    rect_or_mask = 100      # flag for selecting rect or mask mode
+    value = DRAW_FG         # drawing initialized to FG
+    thickness = 10           # brush thickness
+        
+    def __init__(self, imagen):
+        self.img = imagen
+        
+
+    def onmouse(self, event, x, y, flags, param):
+        # Draw Rectangle
+        if event == cv2.EVENT_RBUTTONDOWN:
+            self.rectangle = True
+            self.ix, self.iy = x,y
 
         elif event == cv2.EVENT_MOUSEMOVE:
-            if self.drawing:
-                self.rect = (self.rect[0], self.rect[1], x - self.rect[0], y - self.rect[1])
-                temp_output = self.image.copy()
-                cv2.rectangle(temp_output, (self.rect[0], self.rect[1]), (self.rect[0] + self.rect[2], self.rect[1] + self.rect[3]), (0, 255, 0), 2)
-                cv2.imshow(self.win_name, temp_output)
+            if self.rectangle == True:
+                self.img = self.img2.copy()
+                cv2.rectangle(self.img, (self.ix, self.iy), (x, y), self.BLUE, 2)
+                self.rect = (min(self.ix, x), min(self.iy, y), abs(self.ix - x), abs(self.iy - y))
+                self.rect_or_mask = 0
 
-    def reset(self):
-        self.rect = None
-        self.drawing = False
-        self.init_rect = False
-        self.mask = None
-        self.output = None
+        elif event == cv2.EVENT_RBUTTONUP:
+            self.rectangle = False
+            self.rect_over = True
+            cv2.rectangle(self.img, (self.ix, self.iy), (x, y), self.BLUE, 2)
+            self.rect = (min(self.ix, x), min(self.iy, y), abs(self.ix - x), abs(self.iy - y))
+            self.rect_or_mask = 0
+            print(" Now press the key 'n' a few times until no further change \n")
 
-    def next_iter(self):
-        if self.init_rect:
-            self.mask = self.process_grab_cut()
-            self.output = self.apply_mask()
-            return 1
-        else:
-            return 0
-        
-    def process_image(self):
-        if self.init_rect:
-            self.mask = self.process_grab_cut()
-            self.output = self.apply_mask()
-            
-    def process_grab_cut(self):
-        mask = cv2.GC_BGD * np.ones(self.image.shape[:2], dtype=np.uint8)
-        mask[self.rect[1]:self.rect[1] + self.rect[3], self.rect[0]:self.rect[0] + self.rect[2]] = cv2.GC_PR_FGD
+        # draw touchup curves
 
-        bgd_model = np.zeros((1, 65), dtype=np.float64)
-        fgd_model = np.zeros((1, 65), dtype=np.float64)
-
-        cv2.grabCut(self.image, mask, None, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_MASK)
-        return mask
-
-    def apply_mask(self):
-        output = np.where((self.mask == cv2.GC_PR_FGD) | (self.mask == cv2.GC_FGD), 255, 0).astype(np.uint8)
-        result = cv2.bitwise_and(self.image, self.image, mask=output)
-        return result
-
-
-def GrabcutToImage(image):
-
-    win_name = "image"
-    gc_app = GrabCutApp()
-    gc_app.set_image_and_win_name(image, win_name)
-    gc_app.show_image()
-    
-    cv2.namedWindow(win_name, cv2.WINDOW_AUTOSIZE)
-
-
-    cv2.setMouseCallback(win_name, gc_app.on_mouse)
-    while True:
-        key = cv2.waitKey(0)
-        if key == 27:
-            print("Exiting ...")
-            break
-        elif key == ord('r'):
-            print()
-            gc_app.reset()
-            gc_app.show_image()
-        elif key == ord('n'):
-            iter_count = gc_app.next_iter()
-            print(f"<{iter_count}... ", end='')
-            if iter_count > 0:
-                gc_app.show_image()
-                print(f"{iter_count}>")
+        if event == cv2.EVENT_LBUTTONDOWN:
+            if self.rect_over == False:
+                print("first draw rectangle \n")
             else:
-                print("rect must be determined>")
+                self.drawing = True
+                cv2.circle(self.img, (x,y), self.thickness, self.value['color'], -1)
+                cv2.circle(self.mask, (x,y), self.thickness, self.value['val'], -1)
 
-    cv2.destroyWindow(win_name)
-    return gc_app.apply_mask()
-            
+        elif event == cv2.EVENT_MOUSEMOVE:
+            if self.drawing == True:
+                cv2.circle(self.img, (x, y), self.thickness, self.value['color'], -1)
+                cv2.circle(self.mask, (x, y), self.thickness, self.value['val'], -1)
+
+        elif event == cv2.EVENT_LBUTTONUP:
+            if self.drawing == True:
+                self.drawing = False
+                cv2.circle(self.img, (x, y), self.thickness, self.value['color'], -1)
+                cv2.circle(self.mask, (x, y), self.thickness, self.value['val'], -1)
+
+    def run(self):
+        self.img2 = self.img.copy()                               # a copy of original image
+        self.mask = np.zeros(self.img.shape[:2], dtype = np.uint8) # mask initialized to PR_BG
+        self.output = np.zeros(self.img.shape, np.uint8)           # output image to be shown
+
+        # input and output windows
+        cv2.namedWindow('output')
+        cv2.namedWindow('input')
+        cv2.setMouseCallback('input', self.onmouse)
+        cv2.moveWindow('input', self.img.shape[1]+10,90)
+
+        print(" Instructions: \n")
+        print(" Draw a rectangle around the object using right mouse button \n")
+
+        while(1):
+
+            cv2.imshow('output', self.output)
+            cv2.imshow('input', self.img)
+            k = cv2.waitKey(1)
+
+            # key bindings
+            if k == 27:         # esc to exit
+                break
+            elif k == ord('1'): # BG drawing
+                print(" mark background regions with left mouse button \n")
+                self.value = self.DRAW_BG
+            elif k == ord('2'): # FG drawing
+                print(" mark foreground regions with left mouse button \n")
+                self.value = self.DRAW_FG
+            elif k == ord('3'): # PR_BG drawing
+                self.value = self.DRAW_PR_BG
+            elif k == ord('4'): # PR_FG drawing
+                self.value = self.DRAW_PR_FG
+            elif k == ord('s'): # save image
+                bar = np.zeros((self.img.shape[0], 5, 3), np.uint8)
+                res = np.hstack((self.img2, bar, self.img, bar, self.output))
+                cv2.imwrite('grabcut_output.png', res)
+                print(" Result saved as image \n")
+            elif k == ord('r'): # reset everything
+                print("resetting \n")
+                self.rect = (0,0,1,1)
+                self.drawing = False
+                self.rectangle = False
+                self.rect_or_mask = 100
+                self.rect_over = False
+                self.value = self.DRAW_FG
+                self.img = self.img2.copy()
+                self.mask = np.zeros(self.img.shape[:2], dtype = np.uint8) # mask initialized to PR_BG
+                self.output = np.zeros(self.img.shape, np.uint8)           # output image to be shown
+            elif k == ord('e'): # segment the image
+                print(""" For finer touchups, mark foreground and background after pressing keys 0-3
+                and again press 'n' \n""")
+                try:
+                    bgdmodel = np.zeros((1, 65), np.float64)
+                    fgdmodel = np.zeros((1, 65), np.float64)
+                    if (self.rect_or_mask == 0):         # grabcut with rect
+                        cv2.grabCut(self.img2, self.mask, self.rect, bgdmodel, fgdmodel, 1, cv2.GC_INIT_WITH_RECT)
+                        self.rect_or_mask = 1
+                    elif (self.rect_or_mask == 1):       # grabcut with mask
+                        cv2.grabCut(self.img2, self.mask, self.rect, bgdmodel, fgdmodel, 1, cv2.GC_INIT_WITH_MASK)
+                except:
+                    import traceback
+                    traceback.print_exc()
+
+            mask2 = np.where((self.mask==1) + (self.mask==3), 255, 0).astype('uint8')
+            self.output = cv2.bitwise_and(self.img2, self.img2, mask=mask2)
+        print('Done')
+        return mask2
+
+"""
+if __name__ == '__main__':
+    print(__doc__)
+    App().run()
+    cv2.destroyAllWindows()
+"""
 DEBUG=True
-
+DOC=True
 
 def main():
-
+    if DOC:
+        print(__doc__)
     base_folder = r"C:\Users\Francisco\Documents\ThermalDataset"
     thermal_images_folder="Thermal-Images"
     flirfolder="flir"
@@ -149,14 +223,16 @@ def main():
                         
                     #Acá inicia el procesamiento de la primera imagen de la lista con respecto a las demás. 
                     for image_path,file_name, image_datetime in image_list:
+                        
                         print(image_path, file_name, image_datetime)
                         flir_fixed.process_image(image_path, RGB=True)
                         _, _,temp_fixed,image_fixed = u.extract_images(flir_fixed,plot=0)
-                        imagen_binaria = GrabcutToImage(cv2.cvtColor(image_fixed, cv2.COLOR_RGB2BGR))
-                            # Mostrar la imagen binaria resultante
-                        cv2.imshow('Imagen Binaria', imagen_binaria )
-                        cv2.waitKey(0)
-                        cv2.destroyAllWindows()
+                        image_fixed_brg=cv2.cvtColor(image_fixed, cv2.COLOR_RGB2BGR)
+                        gcapp = GrabCutApp(image_fixed_brg)
+                        imagen_binaria=gcapp.run()
+                        bin_out=u.Refine_Detection_of_feet(imagen_binaria,image_fixed_brg)
+                        
+                        cv2.imwrite(image_path.replace("flir_","mask_").replace(".jpg",".png"), bin_out)
 
 if __name__ == '__main__':
     main()

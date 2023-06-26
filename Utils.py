@@ -31,7 +31,6 @@ def segment_skin(image):
 
     Returns:
         numpy.ndarray: Binary mask with the identified foot region.
-
     """
     lower = np.array([0, 30, 40], dtype = "uint8")
     upper = np.array([20, 180, 255], dtype = "uint8")
@@ -66,9 +65,11 @@ def fethearing_bin_to_color(binary_image, color_image):
     return filtered_image,output_image
 
 def draw_largest_contours(image):
-    # Hacer una AND entre los 3 canales de la imagen
-    and_image = np.bitwise_and(image[:,:,0], np.bitwise_and(image[:,:,1], image[:,:,2]))
-
+    if len(image.shape) == 3:
+        # Hacer una AND entre los 3 canales de la imagen
+        and_image = np.bitwise_and(image[:,:,0], np.bitwise_and(image[:,:,1], image[:,:,2]))
+    else:
+        and_image=image
     # Encontrar los contornos más externos
     contours, _ = cv2.findContours(and_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -79,10 +80,17 @@ def draw_largest_contours(image):
     
     # Crear una nueva imagen binaria con solo los contornos más grandes dibujados
     new_image = np.zeros_like(image)
-    cv2.drawContours(new_image, largest_contours, -1, (255, 255, 255), thickness=cv2.FILLED)
+    if len(image.shape) == 3:
+        cv2.drawContours(new_image, largest_contours, -1, (255, 255, 255), thickness=cv2.FILLED)
+    else:
+        cv2.drawContours(new_image, largest_contours, -1, 255, thickness=cv2.FILLED)
+        
 
     # Convertir la imagen a binaria
-    new_image = cv2.cvtColor(new_image, cv2.COLOR_BGR2GRAY)
+    if len(image.shape) == 3:
+        new_image = cv2.cvtColor(new_image, cv2.COLOR_BGR2GRAY)
+    
+        
     _, new_image = cv2.threshold(new_image, 10, 255, cv2.THRESH_BINARY)
 
     return new_image
@@ -220,7 +228,28 @@ def rotate_image(image, direction):
     
     return image
 
-def Find_feets(Color_Image,thermal_image,percentage=0):
+def Refine_Detection_of_feet(binary_in,Color_Image):
+    #output=segment_skin(Color_Image)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+    closed_image1 = cv2.morphologyEx(binary_in, cv2.MORPH_CLOSE, kernel)
+    kerne2 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    closed_image = cv2.morphologyEx(closed_image1, cv2.MORPH_CLOSE, kerne2)
+    
+    kerne3 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    output_image = cv2.morphologyEx(closed_image, cv2.MORPH_OPEN, kerne3)
+    
+    binary=draw_largest_contours(output_image)
+    return binary
+
+def segment_each_foot(binary_in,Color_Image,thermal_image,percentage=0):
+    segmented_Feet,segmented_temps=resize_contour_boxes_rotated(binary_in, Color_Image, thermal_image, percentage=percentage)
+    segmented_Feet[0]=rotate_image(segmented_Feet[0], "cw")
+    segmented_temps[0]=rotate_image(segmented_temps[0], "cw")
+    segmented_Feet[1]=rotate_image(segmented_Feet[1], "ccw")
+    segmented_temps[1]=rotate_image(segmented_temps[1], "ccw")
+    return segmented_Feet,segmented_temps
+
+def Find_feets(Color_Image,thermal_image,percentage=0): #https://en.wiktionary.org/wiki/feets "Feets, don't fail me now!"
     output=segment_skin(Color_Image)
     _,thresholded_image=fethearing_bin_to_color(output, Color_Image)
     binary=draw_largest_contours(thresholded_image)
