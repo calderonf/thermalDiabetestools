@@ -125,27 +125,14 @@ def resize_contour_boxes_rotated(binary_image, color_image, thermal_image, perce
     result_images = []
     for box in enlarged_boxes:
         rect = cv2.minAreaRect(box)
-        
-        #print("Rectangulos contenedores agrandados:\n",rect)
-        
         center, size, angle = rect
         width = int(size[0])
         height = int(size[1])
-        
         if width>height:
             width,height=height,width ## el cambio de variables mas loco del mundo
             angle=angle-90
-        
         M = cv2.getRotationMatrix2D(center, angle, 1)
-        
-        #print("Tamaño imagen warped", (color_image.shape[1], color_image.shape[0]))
-        
         rotated = cv2.warpAffine(color_image, M, (color_image.shape[1], color_image.shape[0]),borderMode=cv2.BORDER_REFLECT)
-        #print("Recorte en: ",int(center[1] - height / 2),":",int(center[1] + height / 2),",", int(center[0] - width / 2),":",int(center[0] + width / 2))
-        #plt.figure(figsize=(10,5))
-        #plt.imshow(rotated)
-        #plt.title('rotated')
-        #plt.show(block='TRUE') 
         
         result_images.append(rotated[int(center[1] - height / 2):int(center[1] + height / 2), int(center[0] - width / 2):int(center[0] + width / 2)])
     result_temperatures = []
@@ -160,11 +147,21 @@ def resize_contour_boxes_rotated(binary_image, color_image, thermal_image, perce
         M = cv2.getRotationMatrix2D(center, angle, 1)
         rotatedt = cv2.warpAffine(thermal_image, M, (thermal_image.shape[1], thermal_image.shape[0]),borderMode=cv2.BORDER_REFLECT)
         result_temperatures.append(rotatedt[int(center[1] - height / 2):int(center[1] + height / 2), int(center[0] - width / 2):int(center[0] + width / 2)])
-    #print(30*"*")
-    #print("Tamaño de imagenes resultantes de pies")
-    #print("Imagen r: ",result_images[0].shape,"Imagen l: ",result_images[1].shape)
     
-    return result_images,result_temperatures
+    result_mask=[]
+    for box in enlarged_boxes:
+        rect = cv2.minAreaRect(box)
+        center, size, angle = rect
+        width = int(size[0])
+        height = int(size[1])
+        if width>height:
+            width,height=height,width ## el cambio de variables mas loco del mundo
+            angle=angle-90
+        M = cv2.getRotationMatrix2D(center, angle, 1)
+        rotatedm = cv2.warpAffine(binary_image, M, (binary_image.shape[1], binary_image.shape[0]),borderMode=cv2.BORDER_CONSTANT,borderValue=0)
+        result_mask.append(rotatedm[int(center[1] - height / 2):int(center[1] + height / 2), int(center[0] - width / 2):int(center[0] + width / 2)])
+    
+    return result_images,result_temperatures,result_mask
 
 def resize_contour_boxes(binary_image, color_image, thermal_image, percentage=10):
     # Encuentra los contornos externos de la imagen binaria
@@ -242,23 +239,23 @@ def Refine_Detection_of_feet(binary_in,Color_Image):
     return binary
 
 def segment_each_foot(binary_in,Color_Image,thermal_image,percentage=0):
-    segmented_Feet,segmented_temps=resize_contour_boxes_rotated(binary_in, Color_Image, thermal_image, percentage=percentage)
+    segmented_Feet,segmented_temps,result_mask=resize_contour_boxes_rotated(binary_in, Color_Image, thermal_image, percentage=percentage)
     segmented_Feet[0]=rotate_image(segmented_Feet[0], "cw")
     segmented_temps[0]=rotate_image(segmented_temps[0], "cw")
     segmented_Feet[1]=rotate_image(segmented_Feet[1], "ccw")
     segmented_temps[1]=rotate_image(segmented_temps[1], "ccw")
-    return segmented_Feet,segmented_temps
+    return segmented_Feet,segmented_temps,result_mask
 
 def Find_feets(Color_Image,thermal_image,percentage=0): #https://en.wiktionary.org/wiki/feets "Feets, don't fail me now!"
     output=segment_skin(Color_Image)
     _,thresholded_image=fethearing_bin_to_color(output, Color_Image)
     binary=draw_largest_contours(thresholded_image)
-    segmented_Feet,segmented_temps=resize_contour_boxes_rotated(binary, Color_Image, thermal_image, percentage=percentage)
+    segmented_Feet,segmented_temps,result_mask=resize_contour_boxes_rotated(binary, Color_Image, thermal_image, percentage=percentage)
     segmented_Feet[0]=rotate_image(segmented_Feet[0], "cw")
     segmented_temps[0]=rotate_image(segmented_temps[0], "cw")
     segmented_Feet[1]=rotate_image(segmented_Feet[1], "ccw")
     segmented_temps[1]=rotate_image(segmented_temps[1], "ccw")
-    return segmented_Feet,segmented_temps
+    return segmented_Feet,segmented_temps,result_mask,binary
 
 def matchbydescriptors(image_a,image_b):
     # Detectar y extraer puntos clave y descriptores en ambas imágenes

@@ -8,6 +8,6 @@ dependencies:
   - pip:
     - flirimageextractor==1.5.3
     - opencv-contrib-python==4.5.1.48
-    - pip install itk==5.3.0
-    - pip install SimpleITK==2.2.1
+    - itk==5.3.0
+    - SimpleITK==2.2.1
     
