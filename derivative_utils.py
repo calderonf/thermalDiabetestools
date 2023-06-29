@@ -19,6 +19,46 @@ from scipy.interpolate import interp1d
 DEBUG=True
 DOC=True
 
+def obtener_nombres_hdf5(nombre_archivo):
+    """obtener_nombres_hdf5
+
+    Args:
+        nombre_archivo (_type_): nombre de archivo de entrada, 
+
+    Returns:
+        t_right_,       nombre de archivo de transfomracion del pie derecho
+        t_left_,        nombre de archivo de transfomracion del pie izquierdo
+        temp_right_,    nombre de archivo de temeratura del pie derecho
+        temp_left_,     nombre de archivo de temeratura del pie izquierdo
+        mask_right_,    nombre de archivo de mascara del pie derecho
+        mask_left_,     nombre de archivo de mascara del pie izquierdo
+        color_right_,   nombre de archivo de mascara del pie derecho
+        color_left_,    nombre de archivo de mascara del pie izquierdo
+        Raw_mask,       nombre de archivo de mascara de la imagen
+        Raw_RGB,        nombre de archivo de rgb de la imagen
+        Raw_temp,       nombre de archivo de temperaturas de la imagen
+        
+    """
+    partes = nombre_archivo.split("_")  # Dividir el nombre de archivo en partes utilizando el guión bajo como separador
+    fecha_hora = partes[1]  # Obtener la parte de fecha y hora
+    
+    t_right_ = "tr_right_" + fecha_hora.replace(".jpg", ".hdf5")  # Reemplazar la extensión .jpg por .hdf5
+    t_left_ = "tr_left_" + fecha_hora.replace(".jpg", ".hdf5")  # Reemplazar la extensión .jpg por .hdf5
+    
+    temp_right_ = "temp_right_" + fecha_hora.replace(".jpg", ".csv")  # Reemplazar la extensión .jpg por .csv
+    temp_left_ = "temp_left_" + fecha_hora.replace(".jpg", ".csv")  # Reemplazar la extensión .jpg por .csv
+    
+    mask_right_ ="mask_right_" + fecha_hora.replace(".jpg", ".png")  # Reemplazar la extensión .jpg por .csv
+    mask_left_ ="mask_left_" + fecha_hora.replace(".jpg", ".png")  # Reemplazar la extensión .jpg por .csv
+    
+    color_right_ ="color_right_" + fecha_hora.replace(".jpg", ".png")  # Reemplazar la extensión .jpg por .csv
+    color_left_ ="color_left_" + fecha_hora.replace(".jpg", ".png")  # Reemplazar la extensión .jpg por .csv
+    
+    Raw_mask ="Raw_mask" + fecha_hora.replace(".jpg", ".png")  # Reemplazar la extensión .jpg por .csv
+    Raw_RGB ="Raw_RGB" + fecha_hora.replace(".jpg", ".png")  # Reemplazar la extensión .jpg por .csv
+    Raw_temp ="Raw_temp" + fecha_hora.replace(".jpg", ".csv")  # Reemplazar la extensión .jpg por .csv
+    
+    return t_right_,t_left_,temp_right_,temp_left_, mask_right_, mask_left_, color_right_, color_left_,Raw_mask,Raw_RGB,Raw_temp
 
 def calcular_derivada_temporal(imagenes, tiempos, coeficientes):
     # Convertir la lista de imágenes en un arreglo tridimensional (altura x ancho x número de imágenes)
@@ -93,29 +133,32 @@ def main():
                     # Ordenar la lista de imágenes por fecha
                     image_list = sorted(image_list, key=lambda x: x[2])# x[2] is file_datetime
                         
+                    #Acá inicia el procesamiento para hallar la diferencia de tiempos entre imagenes.
+                    times=[]
+                    for i in range(len(image_list) - 1):
+                        image_path1,file_name1, image_datetime1 = image_list[i]
+                        image_path2,file_name2, image_datetime2 = image_list[i + 1]
+                        times.append(calcular_diferencia_segundos(image_datetime1, image_datetime2))
+                        
+                    print("times between shoots of  ",f"paciente_{patient_number}"," in folder: ",folder_name,times)
+                    """ 
                     #Acá inicia el procesamiento de la primera imagen de la lista con respecto a las demás. 
                     for i in range(len(image_list) - 1):
                         
                         image_path1,file_name1, image_datetime1 = image_list[i]
                         image_path2,file_name2, image_datetime2 = image_list[i + 1]
+                        
+                        filer1,filel1,filethermalr1,filethermall1, mask_right_1, mask_left_1, color_right_1, color_left_1,Raw_mask1,Raw_RGB1,Raw_temp1=obtener_nombres_hdf5(file_name1)
+                        filer2,filel2,filethermalr2,filethermall2, mask_right_2, mask_left_2, color_right_2, color_left_2,Raw_mask2,Raw_RGB2,Raw_temp2=obtener_nombres_hdf5(file_name2)
                         print(image_path1, file_name1, image_datetime1)
                         print(image_path2, file_name2, image_datetime2)
                         
-                        flir_fixed.process_image(image_path1, RGB=True)
-                        flir_fixed.process_image(image_path2, RGB=True)
-                        _, _,temp_fixed,image_fixed = u.extract_images(flir_fixed,plot=0)
+                        right_foot_temp1=u.load_thermal_csv(filethermalr1,delimiter=";")
+                        left_foot_temp1=u.load_thermal_csv(filethermall1,delimiter=";")
                         
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
-                        
+                        right_foot_temp2=u.load_thermal_csv(filethermalr2,delimiter=";")
+                        left_foot_temp2=u.load_thermal_csv(filethermall2,delimiter=";")
+                    """ 
 
 if __name__ == '__main__':
     main()

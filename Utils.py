@@ -453,6 +453,9 @@ def save_thermal_csv(data, filename, delimiter=';'):
     """
     np.savetxt(filename, data, delimiter=delimiter)# ; is the default for spanish.
 
+def load_thermal_csv(filename,delimiter=";"):
+    return np.loadtxt(filename, delimiter=delimiter)
+
 def extract_coarse_image_values(flirobj, offset=[0], plot=1):
     """
     Function that creates the coarse RGB image that matches the resolution of the thermal image.

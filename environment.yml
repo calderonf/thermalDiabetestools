@@ -10,4 +10,5 @@ dependencies:
     - opencv-contrib-python==4.5.1.48
     - itk==5.3.0
     - SimpleITK==2.2.1
+    - scipy==1.8.1
     
