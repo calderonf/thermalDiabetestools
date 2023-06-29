@@ -143,7 +143,7 @@ def register_images_Similarity2DTransform(fixed_image, moving_image, output_tran
     R.SetMetricAsMattesMutualInformation(numberOfBins)
     R.SetMetricSamplingPercentage(samplingPercentage, sitk.sitkWallClock)
     R.SetMetricSamplingStrategy(R.RANDOM)
-    R.SetOptimizerAsRegularStepGradientDescent(0.1, 0.0005, 800)
+    R.SetOptimizerAsRegularStepGradientDescent(0.1, 0.0005, 1800)
     initial_transform = sitk.CenteredTransformInitializer(fixed_image, moving_image, sitk.Similarity2DTransform(),sitk.CenteredTransformInitializerFilter.GEOMETRY)
     R.SetInitialTransform(initial_transform)
     R.SetInterpolator(sitk.sitkLinear)

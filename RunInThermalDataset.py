@@ -16,7 +16,7 @@ PREVSIZE=(205, 443)
 base_folder = r"C:\Users\Francisco\Documents\ThermalDataset"
 thermal_images_folder="Thermal-Images"
 flirfolder="flir"
-sub_folders = ["Control", "Diabetic"]
+sub_folders = ["Diabetic","Control"]
 patient_numbers = {
     "Control": [3, 4, 5, 6, 9, 11, 12, 13, 14, 16, 17, 18, 19],
     "Diabetic": [1, 2, 7, 8, 10, 20, 21, 22]
