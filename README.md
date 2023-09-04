@@ -25,7 +25,19 @@
 3. Install the required dependencies:
 
    ```bash
-   conda env create -f environment.yml
+      $ conda env create -f environment.yml
+   ```
+
+ To activate this environment, use
+
+   ```bash
+      $ conda activate thermal
+   ```
+
+ To deactivate an active environment, use
+
+   ```bash
+      $ conda deactivate
    ```
 
 ### to install sdk of flir (to this moment is optional)
