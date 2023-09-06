@@ -1,5 +1,5 @@
 # Importing Functions
-import flirimageextractor
+import flir_image_extractor as flirimageextractor
 from matplotlib import pyplot as plt
 from matplotlib import colors
 import numpy as np
