@@ -73,6 +73,7 @@ class MaskSelector:
     def __init__(self, anns):
         self.anns = sorted(anns, key=lambda x: x['area'], reverse=True)
         self.final_mask = np.zeros_like(self.anns[0]['segmentation'], dtype=bool)
+        print("otro punto en mascara final: ",self.final_mask[0, 0])
         
         self.fig, self.ax = plt.subplots()
         self.cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
@@ -91,14 +92,14 @@ class MaskSelector:
     def onclick(self, event):
         if event.xdata is not None and event.ydata is not None:
             x, y = int(event.xdata), int(event.ydata)
-            print("(x,y):= (",x,",",y,")")
             for ann in self.anns:
-                if ann['segmentation'][y, x]:
-                    self.final_mask = np.logical_or(self.final_mask, ann['segmentation'])
+                if ann['segmentation'][y, x] and not (ann['segmentation'][0,0]):
+                    print("Entro")
+                    self.final_mask[ann['segmentation']]=True
                     break
-            self.ax.clear()
-            self.ax.imshow(self.final_mask, cmap='gray')
-            self.show_masks()
+                    
+            #self.ax.clear()
+            #self.ax.imshow(self.final_mask, cmap='gray')
 
     def get_final_mask(self):
         self.fig.canvas.mpl_disconnect(self.cid)
@@ -220,8 +221,3 @@ for sub_folder in sub_folders:
                         """
             else:
                 print("Error, no encuentro el directorio: ",folder_path)
-
-
-
-
-
