@@ -111,6 +111,38 @@ def select_and_merge_masks(anns):
     plt.waitforbuttonpress()
     return selector.get_final_mask()
 
+class MaskVisualizer:
+    def __init__(self, mask, save_path=None):
+        self.mask = mask
+        self.save_path = save_path
+        self.is_satisfied = False
+        
+        self.fig, self.ax = plt.subplots()
+        self.ax.imshow(self.mask, cmap='gray')
+        self.ax.set_title("Final Combined Mask")
+        
+        self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
+        
+    def on_key_press(self, event):
+        if event.key == 'q':
+            self.is_satisfied = True
+            plt.close(self.fig)
+        elif event.key == 'r':
+            self.is_satisfied = False
+            plt.close(self.fig)
+
+    def show_and_wait(self):
+        plt.show()
+        if self.save_path and self.is_satisfied:
+            plt.imsave(self.save_path, self.mask.astype(np.uint8) * 255, cmap='gray')
+        return self.is_satisfied
+
+def visualize_and_decide(mask, save_path=None):
+    visualizer = MaskVisualizer(mask, save_path)
+    return visualizer.show_and_wait()
+
+
+
 def visualize_and_save_final_mask(mask, save_path=None):
     # Visualizar la máscara final
     plt.imshow(mask, cmap='gray')
@@ -146,7 +178,7 @@ thermal_images_folder="Thermal-Images"
 flirfolder="flir"
 sub_folders = ["Control", "Diabetic"]
 patient_numbers = {
-    "Control": [3, 4, 5, 6, 9, 11, 12, 13, 14, 16, 17, 18, 19],
+    "Control": [ 9, 11, 12, 13, 14, 16, 17, 18, 19],#3, 4, 5, 6,
     "Diabetic": [1, 2, 7, 8, 10, 20, 21, 22]
 }
 if DEBUG_VISUAL_L2:
@@ -197,9 +229,16 @@ for sub_folder in sub_folders:
                         
                         #cv2.imwrite(str(os.path.join(folder_path, Raw_RGB)),cv2.cvtColor(image_moving, cv2.COLOR_RGB2BGR))
                         #u.save_thermal_csv(temp_moving,str(os.path.join(folder_path, Raw_temp)))
-                        masks2 = mask_generator_2.generate(image_moving)
-                        final_mask = select_and_merge_masks(masks2)
-                        visualize_and_save_final_mask(final_mask,save_path=str(os.path.join(folder_path, Raw_mask)))
+                        #masks2 = mask_generator_2.generate(image_moving)
+                        #final_mask = select_and_merge_masks(masks2)
+                        #visualize_and_save_final_mask(final_mask,save_path=str(os.path.join(folder_path, Raw_mask)))
+                        
+                        satisfied = False
+                        while not satisfied:
+                            masks2 = mask_generator_2.generate(image_moving)
+                            final_mask = select_and_merge_masks(masks2)
+                            satisfied = visualize_and_decide(final_mask, save_path=str(os.path.join(folder_path, Raw_mask)))
+                        
                         """
                         print(type(masks2))
                         print(dir(masks2))
