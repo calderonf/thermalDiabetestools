@@ -166,7 +166,7 @@ mask_generator_2 = SamAutomaticMaskGenerator(
     stability_score_thresh=0.92,
     crop_n_layers=1,
     crop_n_points_downscale_factor=2,
-    min_mask_region_area=1.2*2*2*2*2*2*2*70*100,  # Requires open-cv to run post-processing
+    min_mask_region_area=100,  # Requires open-cv to run post-processing
 )
 
 DEBUG=True
@@ -178,8 +178,8 @@ thermal_images_folder="Thermal-Images"
 flirfolder="flir"
 sub_folders = ["Control", "Diabetic"]
 patient_numbers = {
-    "Control": [ 9, 11, 12, 13, 14, 16, 17, 18, 19],#3, 4, 5, 6,
-    "Diabetic": [1, 2, 7, 8, 10, 20, 21, 22]
+    "Control": [  ],#3, 4, 5, 6, 9, 11, 12, 13, 14, 16, 17, 18, 19
+    "Diabetic": [10, 20, 21, 22]#1, 2, 7, 8, # actualización, aca voy en las segmentaciones manuales
 }
 if DEBUG_VISUAL_L2:
     # Crear la figura y los subplots una vez antes del bucle

@@ -12,7 +12,7 @@
 
 ## Installation
 
-0. Download and decompress exiftool ( https://exiftool.org/ ) and then paste it into windows folder ("C:\\Windows\\exiftool.exe")
+0. Download and decompress exiftool ( https://exiftool.org/ ) and then paste it into windows folder ("C:\\Windows\\exiftool.exe") remove the -k in the name
 
 1. Clone the repository:
 
