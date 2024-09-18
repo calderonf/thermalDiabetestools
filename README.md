@@ -1,20 +1,20 @@
 # ThermalDiabetesTools
 
-![ThermalDiabetesTool](https://github.com/calderonf/thermalDiabetestools/blob/main/logo_thermal_%20diabetes_tools_cuadrado.png?raw=true)
+![ThermalDiabetesTools](https://github.com/calderonf/thermalDiabetestools/blob/main/logo_thermal_%20diabetes_tools_cuadrado.png?raw=true)
 
-**ThermalDiabetesTools** is a software tool designed to analyze a temporal series of thermal images captured using the FLIR One Pro camera. The tool aims to predict the likelihood of a person developing diabetes based on the analysis of temperature progression at various points on their feet.
+**ThermalDiabetesTools** is a software tool designed to analyze a temporal series of thermal images captured using the FLIR One Pro camera. The primary aim is to predict the likelihood of a person developing diabetes based on the analysis of temperature progression at various points on their feet.
 
 ## Features
 
-- A library to capture and process thermal RGB and perform image registration of images captured with flir one pro cameras
+- A library to capture and process thermal RGB images and perform image registration using FLIR One Pro cameras.
 - Import a temporal series of thermal images captured with the FLIR One Pro camera.
-- Analyze the temperature progression over time at different points on the feet or at the complete feet.
+- Analyze the temperature progression over time at different points on the feet or the entire foot.
 - Perform statistical analysis and modeling to predict the likelihood of diabetes.
-- Generate informative visualizations and reports to aid in decision-making.
+- Generate informative visualizations and reports to assist in decision-making.
 
 ## Installation
 
-0. Download and decompress exiftool ( https://exiftool.org/ ) and then paste it into windows folder ("C:\\Windows\\exiftool.exe") remove the -k in the name
+0. Download and decompress ExifTool (https://exiftool.org/). Then place it in the Windows folder ("C:\\Windows\\exiftool.exe"). Remove the `-k` from the filename.
 
 1. Clone the repository:
 
@@ -22,48 +22,48 @@
    git clone https://github.com/calderonf/ThermalDiabetesTools.git
    ```
 
-2. Install anaconda Python https://www.anaconda.com/
+2. Install Anaconda Python from https://www.anaconda.com/.
 
 3. Install the required dependencies:
 
    ```bash
-      $ conda env create -f environment.yml
+   conda env create -f environment.yml
    ```
 
- To activate this environment, use
+   To activate this environment, use:
 
    ```bash
-      $ conda activate thermal
+   conda activate thermal
    ```
 
- To deactivate an active environment, use
+   To deactivate the active environment, use:
 
    ```bash
-      $ conda deactivate
+   conda deactivate
    ```
 
-### to install sdk of flir (to this moment is optional)
+### Installing the FLIR SDK (optional)
 
-Download it from web page, https://flir.custhelp.com/app/account/fl_download_software and then select SDK and FLIR science file sdk i download and tested the windows one. 
+Download the SDK from the webpage (https://flir.custhelp.com/app/account/fl_download_software), and select the FLIR Science File SDK. Download and test the Windows version.
 
-decompress and install the .exe in my case was "C:\Program Files\FLIR Systems\sdks" the installation folder
+Decompress and install the `.exe` file, typically located in "C:\Program Files\FLIR Systems\sdks".
 
-in "file:///C:/Program%20Files/FLIR%20Systems/sdks/file/python/doc/index.html" there is a documentation of the python sdk. 
+For Python SDK documentation, refer to "file:///C:/Program%20Files/FLIR%20Systems/sdks/file/python/doc/index.html".
 
-there was no whl in my sdk i have to install it:
-you will need a visual studio (https://visualstudio.microsoft.com/es/thank-you-downloading-visual-studio/?sku=Community&rel=15) for the version 3.8 in windows the compiler was vs2017 install it with C++ support
+If there is no `.whl` file in the SDK, you will need to install it manually. Visual Studio is required (https://visualstudio.microsoft.com/es/thank-you-downloading-visual-studio/?sku=Community&rel=15). For version 3.8 on Windows, use the VS2017 compiler and install it with C++ support.
+
    ```bash
    cd "C:\Program Files\FLIR Systems\sdks\file\python"
    conda activate thermal
    pip install setuptools cython wheel
    python setup.py install --shadow-dir C:\tempflir
    ```
-   now find in this temporal directory for the *.whl file in my case python 3.8 and AMD64.
-   an install it using 
+
+   Next, locate the `.whl` file in the temporary directory (e.g., for Python 3.8 and AMD64) and install it:
+
    ```bash
    pip install .\FileSDK-4.1.0-cp38-cp38-win_amd64.whl
    ```
-
 
 ## Usage
 
@@ -71,7 +71,7 @@ you will need a visual studio (https://visualstudio.microsoft.com/es/thank-you-d
 
 2. Import the temporal series of thermal images captured with the FLIR One Pro camera.
 
-3. Perform the analysis to analyze the temperature progression at various points on the feet.
+3. Perform the analysis to track the temperature progression at various points on the feet.
 
 4. Utilize the statistical analysis and modeling capabilities to predict the likelihood of diabetes.
 
@@ -83,22 +83,22 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).?????
+This project is licensed under the [MIT License](LICENSE).
 
 ## Acknowledgements
 
 - The `ThermalDiabetesTools` software was inspired by the work of researchers in the field of thermal imaging and diabetes prediction.
-- the exiftool project https://github.com/exiftool/exiftool , https://exiftool.org/ , and exiftoolgui https://exiftool.org/forum/index.php?topic=2750.0
-- FLIR_thermal_tools project https://github.com/susanmeerdink/FLIR_thermal_tools
-- flir image extractor project (https://pypi.org/project/flirimageextractor/) https://github.com/nationaldronesau/FlirImageExtractor
-- read_thermal_temperature project https://github.com/ManishSahu53/read_thermal_temperature
-- partial acknowledmen to Flir and teledine corporation to the creation of this software, your lack and difficulti of acces to the information of your cameras was vital for the creation of this library (https://flir.custhelp.com/app/account/fl_download_software)
-
+- ExifTool project: https://github.com/exiftool/exiftool, https://exiftool.org/, and ExifToolGUI: https://exiftool.org/forum/index.php?topic=2750.0
+- FLIR Thermal Tools project: https://github.com/susanmeerdink/FLIR_thermal_tools
+- FLIR Image Extractor project: (https://pypi.org/project/flirimageextractor/) https://github.com/nationaldronesau/FlirImageExtractor
+- Read Thermal Temperature project: https://github.com/ManishSahu53/read_thermal_temperature
+- Partial acknowledgement to FLIR and Teledyne Corporation for their indirect role in the creation of this software; the lack of and difficulty in accessing information about their cameras was vital for the development of this library (https://flir.custhelp.com/app/account/fl_download_software).
 
 ## Contact
 
-For any inquiries or further information, please contact our team at calderonf@javeriana.edu.co
+For any inquiries or further information, please contact our team at [calderonf@javeriana.edu.co](mailto:calderonf@javeriana.edu.co).
 
 ## Disclaimer
 
-The `ThermalDiabetesTools` software is not intended to replace professional medical advice or diagnosis. It is a tool meant to assist in the analysis and prediction of diabetes based on thermal imaging data. Always consult with a healthcare professional for accurate diagnosis and treatment.
+The `ThermalDiabetesTools` software is not intended to replace professional medical advice or diagnosis. It is a tool designed to assist in the analysis and prediction of diabetes based on thermal imaging data. Always consult with a healthcare professional for accurate diagnosis and treatment.
+
