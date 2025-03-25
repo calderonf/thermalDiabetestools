@@ -20,6 +20,7 @@
 
    ```bash
    git clone https://github.com/calderonf/ThermalDiabetesTools.git
+   cd ThermalDiabetesTools
    ```
 
 2. Install Anaconda Python from https://www.anaconda.com/.
