@@ -381,7 +381,12 @@ def apply_colormap(image):
         numpy.ndarray: The resulting false color image.
 
     """
-    normalized_image = (image - np.min(image)) / (np.max(image) - np.min(image))
+    min_val = np.min(image)
+    max_val = np.max(image)
+    if max_val == min_val:
+        normalized_image = np.zeros_like(image, dtype=np.float32)
+    else:
+        normalized_image = (image - min_val) / (max_val - min_val)
     colormap_image = cv2.applyColorMap((normalized_image * 255).astype(np.uint8), cv2.COLORMAP_JET)
     return colormap_image
 
