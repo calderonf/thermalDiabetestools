@@ -63,8 +63,18 @@ If there is no `.whl` file in the SDK, you will need to install it manually. Vis
    Next, locate the `.whl` file in the temporary directory (e.g., for Python 3.8 and AMD64) and install it:
 
    ```bash
+
    pip install .\FileSDK-4.1.0-cp38-cp38-win_amd64.whl
    ```
+
+### Running Tests
+
+The repository includes a small test suite located in the `tests/` folder.
+After installing the dependencies you can execute the tests with `pytest`:
+
+```bash
+pytest
+```
 
 ## Usage
 
