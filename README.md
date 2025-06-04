@@ -6,11 +6,12 @@
 
 ## Features
 
-- A library to capture and process thermal RGB images and perform image registration using FLIR One Pro cameras.
-- Import a temporal series of thermal images captured with the FLIR One Pro camera.
-- Analyze the temperature progression over time at different points on the feet or the entire foot.
+- Capture and process synchronized thermal and RGB frames from FLIR One Pro cameras.
+- Import and manage temporal series of thermal images.
+- Track temperature progression at custom points or across the entire foot.
+- Apply registration and filtering algorithms to improve image alignment.
 - Perform statistical analysis and modeling to predict the likelihood of diabetes.
-- Generate informative visualizations and reports to assist in decision-making.
+- Generate informative visualizations and reports to assist in decision‑making.
 
 ## Installation
 
@@ -104,6 +105,12 @@ This project is licensed under the [MIT License](LICENSE).
 - FLIR Image Extractor project: (https://pypi.org/project/flirimageextractor/) https://github.com/nationaldronesau/FlirImageExtractor
 - Read Thermal Temperature project: https://github.com/ManishSahu53/read_thermal_temperature
 - Partial acknowledgement to FLIR and Teledyne Corporation for their indirect role in the creation of this software; the lack of and difficulty in accessing information about their cameras was vital for the development of this library (https://flir.custhelp.com/app/account/fl_download_software).
+
+## How to cite
+
+If you use **ThermalDiabetesTools** in your research, please cite the following publication:
+
+Calderon, F.C., Zequera-Díaz, M., Gerlein, E.A., Naemi, R. (2025). *The Development of A Comprehensive Library for Thermal Image Analysis of Diabetic Feet: ThermalDiabetesTools*. In: Ballarin, V.L., Martinez-Licona, F., Pérez-Buitrago, S.M., Ibarra-Ramírez, E.A., Berriere, L.R. (eds) **1st IFMBE Latin American Conference on Digital Health**. CLASD 2024. IFMBE Proceedings, vol 119. Springer, Cham. [https://doi.org/10.1007/978-3-031-88064-3_10](https://doi.org/10.1007/978-3-031-88064-3_10)
 
 ## Contact
 
