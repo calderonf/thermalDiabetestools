@@ -26,14 +26,14 @@ def obtener_nombres_hdf5(nombre_archivo):
         nombre_archivo (_type_): nombre de archivo de entrada, 
 
     Returns:
-        t_right_,       nombre de archivo de transfomracion del pie derecho
-        t_left_,        nombre de archivo de transfomracion del pie izquierdo
-        temp_right_,    nombre de archivo de temeratura del pie derecho
-        temp_left_,     nombre de archivo de temeratura del pie izquierdo
+        t_right_,       nombre de archivo de transformacion del pie derecho
+        t_left_,        nombre de archivo de transformacion del pie izquierdo
+        temp_right_,    nombre de archivo de temperatura del pie derecho
+        temp_left_,     nombre de archivo de temperatura del pie izquierdo
         mask_right_,    nombre de archivo de mascara del pie derecho
         mask_left_,     nombre de archivo de mascara del pie izquierdo
-        color_right_,   nombre de archivo de mascara del pie derecho
-        color_left_,    nombre de archivo de mascara del pie izquierdo
+        color_right_,   nombre de archivo de imagen a color del pie derecho
+        color_left_,    nombre de archivo de imagen a color del pie izquierdo
         Raw_mask,       nombre de archivo de mascara de la imagen
         Raw_RGB,        nombre de archivo de rgb de la imagen
         Raw_temp,       nombre de archivo de temperaturas de la imagen
