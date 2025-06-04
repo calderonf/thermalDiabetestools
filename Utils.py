@@ -46,7 +46,7 @@ def segment_skin(image):
     skin = cv2.bitwise_or(skin1,skin2)
     return skin
 
-def fethearing_bin_to_color(binary_image, color_image):
+def feathering_bin_to_color(binary_image, color_image):
     # Operación de cierre morfológico con un kernel elíptico de tamaño 5x5
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
     closed_image1 = cv2.morphologyEx(binary_image, cv2.MORPH_CLOSE, kernel)
@@ -248,7 +248,7 @@ def segment_each_foot(binary_in,Color_Image,thermal_image,percentage=0):
 
 def Find_feets(Color_Image,thermal_image,percentage=0): #https://en.wiktionary.org/wiki/feets "Feets, don't fail me now!"
     output=segment_skin(Color_Image)
-    _,thresholded_image=fethearing_bin_to_color(output, Color_Image)
+    _,thresholded_image=feathering_bin_to_color(output, Color_Image)
     binary=draw_largest_contours(thresholded_image)
     segmented_Feet,segmented_temps,result_mask=resize_contour_boxes_rotated(binary, Color_Image, thermal_image, percentage=percentage)
     segmented_Feet[0]=rotate_image(segmented_Feet[0], "cw")
